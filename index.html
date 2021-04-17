@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            background: #121212;
+            color: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        input {
+            flex: 1;
+            color: #ffffff;
+            height: 36px;
+            border-radius: 36px;
+            padding: 20px;
+            background: #121212;
+            box-sizing: border-box;
+            border: 1px solid #4c4c4c;
+            margin: 0 5px;
+        }
+
+        button {
+            background-color: #1db954;
+            border: 1px solid #1db954;
+            color: #ffffff;
+            height: 36px;
+            border-radius: 36px;
+            padding: 20px;
+            box-sizing: border-box;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            text-transform: uppercase;
+            margin: 0 5px;
+        }
+
+        .filter {
+            display: flex;
+        }
+
+        .song {
+            display: flex;
+            align-items: center;
+        }
+
+        .video-container {}
+
+        .song-details {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            width: 100%;
+        }
+        .song-details > h3 {
+            margin: 0;
+        }
+
+        .song-lyrics {
+            height: 160px;
+            overflow: auto;
+            padding: 10px;
+            width: 100%;
+
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+</body>
+<script type="module">
+    import { h, Component, render, useEffect, useState, useRef } from 'https://npm.reversehttp.com/preact,preact/hooks';
+    import htm from 'https://unpkg.com/htm?module';
+
+    function fetchSpotifyPlaylist(id = '') {
+        return fetch('/spotify?playlist=' + id).then(res => res.json())
+    }
+
+    function fetchYoutubeSong(artist = '', title = '') {
+        return fetch('/youtube?artist=' + artist + '&title=' + title).then(res => res.json())
+    }
+
+    function fetchLyrics(artist = '', title = '') {
+        return fetch('/lyrics?artist=' + artist + '&title=' + title).then(res => res.json())
+    }
+
+    const html = htm.bind(h);
+
+    function Song({ song }) {
+        const [youtubeSong, setYoutubeSong] = useState();
+        const [lyrics, setLyrics] = useState([]);
+
+        const video = useRef()
+
+        useEffect(() => {
+            fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
+            fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
+        }, [song]);
+
+        return html`
+            <div class="song">
+                ${youtubeSong && html`
+                    <div class="video-container">
+                        <video ref=${video} width="320" height="240" controls>
+                            <source
+                                src="${youtubeSong.formats[youtubeSong.formats.length - 1].url}"
+                                type="video/mp4"
+                            />
+                        </video>
+                    </div>
+                `}
+
+
+                <div class="song-details">
+                    <h3>${song.artist} - ${song.title}</h3>
+
+                    ${lyrics && html`
+                        <div class="song-lyrics" >
+                            ${lyrics.map(phrase => html`<span>${phrase}</span>`)}
+                        </div>
+                    `}
+                </div>
+            </div>`;
+    }
+
+    function App() {
+        const [playlistURL, setPlaylistURL] = useState('');
+        const [songs, setSongs] = useState([]);
+
+        const fetchPlaylist = () => {
+            let playlistID = '';
+
+            try {
+                const url = new URL(playlistURL);
+                playlistID = url.pathname.split('/').reverse()[0];
+            } catch { }
+
+            fetchSpotifyPlaylist(playlistID).then(data => setSongs(data.results));
+        };
+
+        return html`
+            <div>
+                <div class="filter">
+                    <input
+                        placeholder="https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA"
+                        value="${playlistURL}"
+                        onChange="${event => setPlaylistURL(event.target.value)}"
+                    />
+
+                    <button onClick="${fetchPlaylist}">Confirm</button>
+                </div>
+
+                <div class="songs">${songs.map(song => html`<${Song} key="${song.id}" song="${song}" />`)}</div>
+            </div>
+        `;
+    }
+
+    render(html`<${App} />`, document.getElementById('app'));
+</script>
+
+</html>
