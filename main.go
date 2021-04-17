@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -15,5 +16,7 @@ func main() {
 	r.HandleFunc("/lyrics", LyricsHandler)
 
 	http.Handle("/", r)
-	log.Fatal(http.ListenAndServe(":8000", r))
+
+	port := os.Getenv("PORT")
+	log.Fatal(http.ListenAndServe(":"+port, r))
 }
