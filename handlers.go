@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os/exec"
 	"strconv"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gocolly/colly"
+	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
 	"github.com/patrickmn/go-cache"
 )
@@ -196,4 +199,30 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
+}
+
+func BindProxy(r *mux.Router) {
+	proxy := &httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			originHost := r.URL.Query().Get("host")
+			if originHost == "" {
+				originHost = "r4---sn-8p8v-bg0sl.googlevideo.com"
+			}
+
+			r.Header.Add("X-Forwarded-Host", r.Host)
+			r.Header.Add("X-Origin-Host", originHost)
+			r.Host = originHost
+			r.URL.Host = originHost
+			r.URL.Scheme = "https"
+		},
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: 50 * time.Second,
+			}).Dial,
+		},
+	}
+
+	r.HandleFunc("/videoplayback", func(w http.ResponseWriter, r *http.Request) {
+		proxy.ServeHTTP(w, r)
+	})
 }

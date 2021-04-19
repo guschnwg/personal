@@ -155,18 +155,26 @@
             video.current.onpaused = onPause
         }, [video.current])
 
+        let url = "";
+        if (youtubeSong) {
+            url = new URL(youtubeSong.formats[youtubeSong.formats.length - 1].url);
+            url.search += "&host=" + url.host;
+            url.host = window.location.host;
+            url.protocol = window.location.protocol;
+        }
+
         return html`
             <div class="song">
-                ${youtubeSong && html`
-                    <div class="video-container">
-                        <video ref=${video} width="320" height="240" controls>
+                <div class="video-container">
+                    <video ref=${video} width="320" height="240" controls poster="${youtubeSong ? youtubeSong.thumbnail : ""}">
+                        ${url && html`
                             <source
-                                src="${youtubeSong.formats[youtubeSong.formats.length - 1].url}"
+                                src="${url}"
                                 type="video/mp4"
                             />
-                        </video>
-                    </div>
-                `}
+                        `}
+                    </video>
+                </div>
 
 
                 <div class="song-details">

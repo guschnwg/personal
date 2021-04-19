@@ -15,6 +15,7 @@ func main() {
 	r.HandleFunc("/youtube", YoutubeHandler)
 	r.HandleFunc("/lyrics", LyricsHandler)
 
+	BindProxy(r)
 	http.Handle("/", r)
 
 	port := os.Getenv("PORT")
