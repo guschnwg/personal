@@ -126,7 +126,8 @@ func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
 	stdout := out.String()
 	results := strings.Split(stdout, "\n")
 	if len(results) == 0 {
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": []string{}})
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	results = results[0 : len(results)-1]
@@ -143,10 +144,13 @@ func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	song := youtubeSongData{}
-	if len(songs) > 0 {
-		song = songs[0]
+	if len(songs) == 0 {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	song := youtubeSongData{}
+	song = songs[0]
 
 	c.Set(cacheKey, song, cache.DefaultExpiration)
 	json.NewEncoder(w).Encode(map[string]interface{}{"results": song})

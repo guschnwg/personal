@@ -2,7 +2,7 @@ build:
 	go build -o ./app.out main.go handlers.go
 
 run:
-	go run main.go handlers.go
+	PORT=8000 gow run main.go handlers.go
 
 docker_build:
 	docker build -t go-app .

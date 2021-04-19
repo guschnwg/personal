@@ -7,6 +7,7 @@
             background: #121212;
             color: #ffffff;
             font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
         }
 
         input {
@@ -34,10 +35,25 @@
             align-items: center;
             text-transform: uppercase;
             margin: 0 5px;
+            cursor: pointer;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
         }
 
         .filter {
             display: flex;
+            padding: 10px;
+        }
+
+        .songs {
+            overflow-y: auto;
+            flex: 1;
+            padding: 10px;
         }
 
         .song {
@@ -53,7 +69,8 @@
             padding: 10px;
             width: 100%;
         }
-        .song-details > h3 {
+
+        .song-details>h3 {
             margin: 0;
         }
 
@@ -65,6 +82,12 @@
 
             display: flex;
             flex-direction: column;
+        }
+
+        .current {
+            display: flex;
+            align-items: center;
+            padding: 10px;
         }
     </style>
 </head>
@@ -90,16 +113,47 @@
 
     const html = htm.bind(h);
 
-    function Song({ song }) {
+    function Song({ song, isPlaying, isPaused, onStart, onPause, onEnd }) {
         const [youtubeSong, setYoutubeSong] = useState();
         const [lyrics, setLyrics] = useState([]);
 
-        const video = useRef()
+        const video = useRef();
 
         useEffect(() => {
             fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
             fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
         }, [song]);
+
+        useEffect(() => {
+            if (!video.current) return;
+
+            if (isPlaying) {
+                video.current.play();
+            } else {
+                video.current.pause();
+                video.current.currentTime = 0;
+            }
+        }, [isPlaying, video.current])
+
+        useEffect(() => {
+            if (!video.current) return;
+
+            if (isPaused) {
+                video.current.pause();
+            } else {
+                if (isPlaying) {
+                    video.current.play();
+                }
+            }
+        }, [isPaused, isPlaying, video.current])
+
+        useEffect(() => {
+            if (!video.current) return;
+
+            video.current.onended = onEnd
+            video.current.onplay = onStart
+            video.current.onpaused = onPause
+        }, [video.current])
 
         return html`
             <div class="song">
@@ -127,9 +181,21 @@
             </div>`;
     }
 
+    function Current({ song, isPaused, onPlay, onPause, onPrev, onNext }) {
+        return html`
+            <div class="current">
+                <button onClick="${onPrev}">${"<<"}</button>
+                <button onClick="${isPaused ? onPlay : onPause}">${song.artist} - ${song.title}</button>
+                <button onClick="${onNext}">${">>"}</button>
+            </div>
+        `;
+    }
+
     function App() {
-        const [playlistURL, setPlaylistURL] = useState('');
+        const [playlistURL, setPlaylistURL] = useState('https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA');
         const [songs, setSongs] = useState([]);
+        const [playing, setPlaying] = useState();
+        const [paused, setPaused] = useState(false);
 
         const fetchPlaylist = () => {
             let playlistID = '';
@@ -139,11 +205,25 @@
                 playlistID = url.pathname.split('/').reverse()[0];
             } catch { }
 
-            fetchSpotifyPlaylist(playlistID).then(data => setSongs(data.results));
+            fetchSpotifyPlaylist(playlistID).then(data => {
+                const newSongs = data.results;
+                setSongs(newSongs);
+                setPlaying(newSongs.length > 0 ? newSongs[0].id : undefined);
+            });
         };
 
+        const handlePrev = (currentIndex) => {
+            const nextIndex = currentIndex === 0 ? songs.length - 1 : currentIndex - 1;
+            setPlaying(songs[nextIndex].id);
+        }
+
+        const handleNext = (currentIndex) => {
+            const nextIndex = currentIndex + 1 >= songs.length ? 0 : currentIndex + 1;
+            setPlaying(songs[nextIndex].id);
+        }
+
         return html`
-            <div>
+            <div class="container">
                 <div class="filter">
                     <input
                         placeholder="https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA"
@@ -154,7 +234,37 @@
                     <button onClick="${fetchPlaylist}">Confirm</button>
                 </div>
 
-                <div class="songs">${songs.map(song => html`<${Song} key="${song.id}" song="${song}" />`)}</div>
+                <div class="songs">
+                    ${songs.map((song, index) => (
+                        html`
+                            <${Song}
+                                key="${song.id}"
+                                song="${song}"
+                                isPlaying="${playing === song.id}"
+                                isPaused="${paused}"
+                                onPause="${() => setPaused(true)}"
+                                onStart="${() => {
+                                    setPlaying(song.id);
+                                    setPaused(false);
+                                }}"
+                                onEnd="${() => handleNext(index)}"
+                            />
+                        `
+                    ))}
+                </div>
+
+                ${playing && (
+                    html`
+                        <${Current}
+                            song="${songs.find(s => s.id === playing)}"
+                            isPaused="${paused}"
+                            onPlay="${() => setPaused(false)}"
+                            onPause="${() => setPaused(true)}"
+                            onPrev="${() => handlePrev(songs.findIndex(s => s.id === playing))}"
+                            onNext="${() => handleNext(songs.findIndex(s => s.id === playing))}"
+                        />
+                    `
+                )}
             </div>
         `;
     }
