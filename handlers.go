@@ -19,10 +19,11 @@ func SpotifyHandler(w http.ResponseWriter, r *http.Request) {
 	if playlistID == "" {
 		playlistID = "1cwq7qqLZAyOb60rhzSiRb"
 	}
-	cacheKey := "spotify - " + playlistID
 
-	if songs, found := c.Get(cacheKey); found {
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": songs})
+	useCache := r.URL.Query().Get("no_cache") == ""
+	cacheKey := "spotify - " + playlistID
+	if songs, found := c.Get(cacheKey); found && useCache {
+		json.NewEncoder(w).Encode(map[string]interface{}{"results": songs, "cached": true})
 		return
 	}
 
@@ -46,10 +47,11 @@ func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
 		title = "One More Dance, Jules"
 	}
 	query := url.QueryEscape(artist + " - " + title)
-	cacheKey := "youtube - " + query
 
-	if song, found := c.Get(cacheKey); found {
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": song})
+	useCache := r.URL.Query().Get("no_cache") == ""
+	cacheKey := "youtube - " + query
+	if song, found := c.Get(cacheKey); found && useCache {
+		json.NewEncoder(w).Encode(map[string]interface{}{"results": song, "cached": true})
 		return
 	}
 
@@ -77,10 +79,11 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 		title = "One More Dance, Jules"
 	}
 	query := url.QueryEscape(artist + " - " + title)
-	cacheKey := "lyrics - " + query
 
-	if lyrics, found := c.Get(cacheKey); found {
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": lyrics})
+	useCache := r.URL.Query().Get("no_cache") == ""
+	cacheKey := "lyrics - " + query
+	if lyrics, found := c.Get(cacheKey); found && useCache {
+		json.NewEncoder(w).Encode(map[string]interface{}{"results": lyrics, "cached": true})
 		return
 	}
 
@@ -96,6 +99,29 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
+}
+
+func FullHandler(w http.ResponseWriter, r *http.Request) {
+	playlistID := r.URL.Query().Get("playlist")
+	if playlistID == "" {
+		playlistID = "5sUXSWQyDifhDrXJ65vVMA"
+	}
+
+	useCache := r.URL.Query().Get("no_cache") == ""
+	cacheKey := "full - " + playlistID
+	if data, found := c.Get(cacheKey); found && useCache {
+		json.NewEncoder(w).Encode(map[string]interface{}{"results": data, "cached": true})
+		return
+	}
+
+	data, err := fetchFull(playlistID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(cacheKey, data, cache.DefaultExpiration)
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": data})
 }
 
 func BindProxy(r *mux.Router) {

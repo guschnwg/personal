@@ -14,6 +14,7 @@ func main() {
 	r.HandleFunc("/spotify", SpotifyHandler)
 	r.HandleFunc("/youtube", YoutubeHandler)
 	r.HandleFunc("/lyrics", LyricsHandler)
+	r.HandleFunc("/full", FullHandler)
 
 	BindProxy(r)
 	http.Handle("/", r)

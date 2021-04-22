@@ -13,9 +13,7 @@ type spotifySongData struct {
 	Artist string `json:"artist"`
 }
 
-func fetchSpotifySongs(playlistID string) ([]spotifySongData, error) {
-	songs := []spotifySongData{}
-
+func fetchSpotifySongs(playlistID string) (songs []spotifySongData, err error) {
 	collector := colly.NewCollector()
 	collector.OnHTML(".tracklist-row > .tracklist-col.name > .track-name-wrapper", func(e *colly.HTMLElement) {
 		children := e.DOM.Children()
@@ -34,7 +32,7 @@ func fetchSpotifySongs(playlistID string) ([]spotifySongData, error) {
 			artistName,
 		})
 	})
-	err := collector.Visit("https://open.spotify.com/playlist/" + playlistID)
+	err = collector.Visit("https://open.spotify.com/playlist/" + playlistID)
 
-	return songs, err
+	return
 }

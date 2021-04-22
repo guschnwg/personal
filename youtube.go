@@ -41,13 +41,13 @@ func fetchYoutubeSongs(query string) (songs []youtubeSongData, err error) {
 	cmdData.Stdout = &out
 	err = cmdData.Run()
 	if err != nil {
-		return songs, err
+		return
 	}
 
 	stdout := out.String()
 	results := strings.Split(stdout, "\n")
 	if len(results) == 0 {
-		return songs, err
+		return
 	}
 
 	results = results[0 : len(results)-1]
@@ -58,9 +58,9 @@ func fetchYoutubeSongs(query string) (songs []youtubeSongData, err error) {
 		if err = json.Unmarshal([]byte(item), &song); err == nil {
 			songs = append(songs, song)
 		} else {
-			return songs, err
+			return
 		}
 	}
 
-	return songs, err
+	return
 }

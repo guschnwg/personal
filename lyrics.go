@@ -18,5 +18,5 @@ func fetchLyrics(query string) (lyrics []string, err error) {
 	URL := "http://www.songlyrics.com/index.php?section=search&searchW=" + strings.ReplaceAll(query, " ", "+") + "&submit=Search&searchIn1=artist&searchIn2=album&searchIn3=song&searchIn4=lyrics"
 	err = collector.Visit(URL)
 
-	return lyrics, err
+	return
 }
