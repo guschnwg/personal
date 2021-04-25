@@ -13,10 +13,10 @@ import (
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", app.IndexHandler)
-	r.HandleFunc("/spotify", app.SpotifyHandler)
-	r.HandleFunc("/youtube", app.YoutubeHandler)
-	r.HandleFunc("/lyrics", app.LyricsHandler)
-	r.HandleFunc("/full", app.FullHandler)
+	r.HandleFunc("/api/spotify", app.SpotifyHandler)
+	r.HandleFunc("/api/youtube", app.YoutubeHandler)
+	r.HandleFunc("/api/lyrics", app.LyricsHandler)
+	r.HandleFunc("/api/full", app.FullHandler)
 
 	app.BindProxy(r)
 

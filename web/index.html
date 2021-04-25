@@ -13,9 +13,9 @@
         input {
             flex: 1;
             color: #ffffff;
-            height: 36px;
-            border-radius: 36px;
-            padding: 20px;
+            height: 46px;
+            border-radius: 46px;
+            padding: 0 20px;
             background: #121212;
             box-sizing: border-box;
             border: 1px solid #4c4c4c;
@@ -26,16 +26,21 @@
             background-color: #1db954;
             border: 1px solid #1db954;
             color: #ffffff;
-            height: 36px;
-            border-radius: 36px;
-            padding: 20px;
+            height: 46px;
+            border-radius: 46px;
+            padding: 0 20px;
             box-sizing: border-box;
             display: inline-flex;
-            justify-content: center;
-            align-items: center;
             text-transform: uppercase;
             margin: 0 5px;
             cursor: pointer;
+            font-weight: bold;
+            font-size: 20px;
+            line-height: 46px;
+        }
+        button.outline {
+            background-color: black;
+            border: 1px solid #1db954;
         }
 
         .container {
@@ -86,8 +91,24 @@
 
         .current {
             display: flex;
+            justify-content: space-between;
             align-items: center;
             padding: 10px;
+        }
+        .current > .song > .info {
+            margin-left: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .current > .song > .info > .title {
+            font-size: 20px;
+        }
+        .current > .song > .info > .artist {
+            font-size: 14px;
+            color: #8e8e8e;
+        }
+        .current button {
+            font-size: 30px;
         }
     </style>
 
@@ -105,19 +126,19 @@
     import htm from 'https://unpkg.com/htm?module';
 
     function fetchAll(id = '') {
-        return fetch('/full?playlist=' + id).then(res => res.json())
+        return fetch('/api/full?playlist=' + id).then(res => res.json())
     }
 
     function fetchSpotifyPlaylist(id = '') {
-        return fetch('/spotify?playlist=' + id).then(res => res.json())
+        return fetch('/api/spotify?playlist=' + id).then(res => res.json())
     }
 
     function fetchYoutubeSong(artist = '', title = '') {
-        return fetch('/youtube?artist=' + artist + '&title=' + title).then(res => res.json())
+        return fetch('/api/youtube?artist=' + artist + '&title=' + title).then(res => res.json())
     }
 
     function fetchLyrics(artist = '', title = '') {
-        return fetch('/lyrics?artist=' + artist + '&title=' + title).then(res => res.json())
+        return fetch('/api/lyrics?artist=' + artist + '&title=' + title).then(res => res.json())
     }
 
     const html = htm.bind(h);
@@ -161,6 +182,7 @@
         }, [isPaused, isPlaying, video.current])
 
         useEffect(() => {
+            // Handle video events
             if (!video.current) return;
 
             video.current.onended = onEnd
@@ -205,9 +227,16 @@
     function Current({ song, isPaused, onPlay, onPause, onPrev, onNext }) {
         return html`
             <div class="current">
-                <button onClick="${onPrev}">${"<<"}</button>
-                <button onClick="${isPaused ? onPlay : onPause}">${song.artist} - ${song.title}</button>
-                <button onClick="${onNext}">${">>"}</button>
+                <button class="outline" onClick="${onPrev}">⏮</button>
+                <div class="song">
+                    <button onClick="${isPaused ? onPlay : onPause}">⏯</button>
+
+                    <div class="info">
+                        <span class="title">${song.title}</span>
+                        <span class="artist">${song.artist}</span>
+                    </div>
+                </div>
+                <button class="outline" onClick="${onNext}">⏭</button>
             </div>
         `;
     }
@@ -252,7 +281,7 @@
                         onChange="${event => setPlaylistURL(event.target.value)}"
                     />
 
-                    <button onClick="${fetchPlaylist}">Confirm</button>
+                    <button onClick="${fetchPlaylist}">SEARCH</button>
                 </div>
 
                 <div class="songs">
