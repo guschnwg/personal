@@ -42,6 +42,9 @@
             background-color: black;
             border: 1px solid #1db954;
         }
+        button:focus {
+            outline: 1px solid red;
+        }
 
         .container {
             height: 100vh;
@@ -110,6 +113,18 @@
         .current button {
             font-size: 30px;
         }
+
+        .loading {
+            height: 300px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading > .emoji {
+            font-size: 56px;
+            margin: 0 10px;
+        }
     </style>
 
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon"/>
@@ -124,6 +139,12 @@
 <script type="module">
     import { h, Component, render, useEffect, useState, useRef } from 'https://npm.reversehttp.com/preact,preact/hooks';
     import htm from 'https://unpkg.com/htm?module';
+
+    const EMOJIS = [
+        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸',
+        '🐵', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴',
+        '🦄', '🐝', '🐛', '🦋', '🐌', '🐞'
+    ];
 
     function fetchAll(id = '') {
         return fetch('/api/full?playlist=' + id).then(res => res.json())
@@ -241,7 +262,34 @@
         `;
     }
 
+    function Loading() {
+        const [emojis, setEmojis] = useState([EMOJIS[0], EMOJIS[13]]);
+
+        useEffect(() => {
+            let indexOne = 0;
+            let indexTwo = 13;
+
+            const interval = setInterval(() => {
+                indexOne = (indexOne + 1) % EMOJIS.length;
+                indexTwo = (indexTwo + 1) % EMOJIS.length;
+
+                setEmojis([EMOJIS[indexOne], EMOJIS[indexTwo]]);
+            }, 100);
+
+            return () => {
+                clearInterval(interval);
+            }
+        }, [])
+
+        return html`
+            <div class="loading">
+                <span class="emoji">${emojis[0]}</span> Loading the most amazing stuff ever... <span class="emoji">${emojis[1]}</span>
+            </div>
+        `
+    }
+
     function App() {
+        const [loading, setLoading] = useState(false);
         const [playlistURL, setPlaylistURL] = useState('https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA');
         const [songs, setSongs] = useState([]);
         const [playing, setPlaying] = useState();
@@ -255,11 +303,13 @@
                 playlistID = url.pathname.split('/').reverse()[0];
             } catch { }
 
+            setLoading(true);
             fetchAll(playlistID).then(data => {
                 const newSongs = data.results;
                 setSongs(newSongs);
                 setPlaying(newSongs.length > 0 ? newSongs[0].id : undefined);
-            });
+                setLoading(false);
+            }).catch(() => setLoading(false));
         };
 
         const handlePrev = (currentIndex) => {
@@ -283,6 +333,8 @@
 
                     <button onClick="${fetchPlaylist}">SEARCH</button>
                 </div>
+
+                ${loading && html`<${Loading} />`}
 
                 <div class="songs">
                     ${songs.map((song, index) => (
@@ -326,14 +378,8 @@
         const originalTitle = document.title;
 
         return () => {
-            const emojis = [
-                '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸',
-                '🐵', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴',
-                '🦄', '🐝', '🐛', '🦋', '🐌', '🐞'
-            ];
-
-            index = (index + 1) % emojis.length;
-            document.title = `${originalTitle} ${emojis[index]}`;
+            index = (index + 1) % EMOJIS.length;
+            document.title = `${originalTitle} ${EMOJIS[index]}`;
         }
     }
 
