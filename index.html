@@ -99,6 +99,10 @@
     import { h, Component, render, useEffect, useState, useRef } from 'https://npm.reversehttp.com/preact,preact/hooks';
     import htm from 'https://unpkg.com/htm?module';
 
+    function fetchAll(id = '') {
+        return fetch('/full?playlist=' + id).then(res => res.json())
+    }
+
     function fetchSpotifyPlaylist(id = '') {
         return fetch('/spotify?playlist=' + id).then(res => res.json())
     }
@@ -114,14 +118,18 @@
     const html = htm.bind(h);
 
     function Song({ song, isPlaying, isPaused, onStart, onPause, onEnd }) {
-        const [youtubeSong, setYoutubeSong] = useState();
-        const [lyrics, setLyrics] = useState([]);
+        const [youtubeSong, setYoutubeSong] = useState(song.youtube);
+        const [lyrics, setLyrics] = useState(song.lyrics);
 
         const video = useRef();
 
         useEffect(() => {
-            fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
-            fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
+            if (!song.youtube) {
+                fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
+            }
+            if (!song.lyrics) {
+                fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
+            }
         }, [song]);
 
         useEffect(() => {
@@ -213,7 +221,7 @@
                 playlistID = url.pathname.split('/').reverse()[0];
             } catch { }
 
-            fetchSpotifyPlaylist(playlistID).then(data => {
+            fetchAll(playlistID).then(data => {
                 const newSongs = data.results;
                 setSongs(newSongs);
                 setPlaying(newSongs.length > 0 ? newSongs[0].id : undefined);
