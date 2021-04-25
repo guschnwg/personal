@@ -92,11 +92,14 @@
     </style>
 
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon"/>
+
+    <title>Gustavo's personal stuff</title>
 </head>
 
 <body>
     <div id="app"></div>
 </body>
+
 <script type="module">
     import { h, Component, render, useEffect, useState, useRef } from 'https://npm.reversehttp.com/preact,preact/hooks';
     import htm from 'https://unpkg.com/htm?module';
@@ -288,6 +291,24 @@
     }
 
     render(html`<${App} />`, document.getElementById('app'));
+
+    function titlePlay() {
+        let index = 0;
+        const originalTitle = document.title;
+
+        return () => {
+            const emojis = [
+                '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸',
+                '🐵', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴',
+                '🦄', '🐝', '🐛', '🦋', '🐌', '🐞'
+            ];
+
+            index = (index + 1) % emojis.length;
+            document.title = `${originalTitle} ${emojis[index]}`;
+        }
+    }
+
+    setInterval(titlePlay(), 500);
 </script>
 
 </html>
