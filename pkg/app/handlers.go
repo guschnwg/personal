@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/guschnwg/personal/pkg/crawlers"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -27,7 +28,7 @@ func SpotifyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	songs, err := fetchSpotifySongs(playlistID)
+	songs, err := crawlers.FetchSpotifySongs(playlistID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -55,14 +56,14 @@ func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	songs, err := fetchYoutubeSongs(query)
+	songs, err := crawlers.FetchYoutubeSongs(query)
 
 	if len(songs) == 0 || err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	song := youtubeSongData{}
+	song := crawlers.YoutubeSongData{}
 	song = songs[0]
 
 	c.Set(cacheKey, song, cache.DefaultExpiration)
@@ -87,7 +88,7 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lyrics, err := fetchLyrics(query)
+	lyrics, err := crawlers.FetchLyrics(query)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -98,7 +99,11 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "index.html")
+	http.ServeFile(w, r, "web/index.html")
+}
+
+func StaticHandler() http.Handler {
+	return http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static")))
 }
 
 func FullHandler(w http.ResponseWriter, r *http.Request) {

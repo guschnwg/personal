@@ -1,4 +1,4 @@
-package main
+package crawlers
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-func fetchLyrics(query string) (lyrics []string, err error) {
+func FetchLyrics(query string) (lyrics []string, err error) {
 	collector := colly.NewCollector(colly.MaxDepth(1))
 	collector.OnHTML("#wrapper > div.wrapper-inner > div.coltwo-wide-2 > div:nth-child(5) > a", func(e *colly.HTMLElement) {
 		collector.Visit(e.Attr("href"))

@@ -1,8 +1,8 @@
 build:
-	go build -o ./app.out main.go handlers.go lyrics.go spotify.go youtube.go full.go
+	go build -o ./app.out cmd/app/main.go
 
 run:
-	PORT=8000 gow run main.go handlers.go lyrics.go spotify.go youtube.go full.go
+	PORT=8000 gow run -v cmd/app/main.go pkg/*
 
 docker_build:
 	docker build -t go-app .

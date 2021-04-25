@@ -10,7 +10,7 @@ RUN make build
 FROM python:3.8-buster AS dist
 
 COPY --from=base /app/app.out /
-COPY --from=base /app/index.html /
+COPY --from=base /app/web/ /web/
 
 RUN pip install youtube_dl
 

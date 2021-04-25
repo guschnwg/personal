@@ -1,4 +1,4 @@
-package main
+package crawlers
 
 import (
 	"strconv"
@@ -7,13 +7,13 @@ import (
 	"github.com/gosimple/slug"
 )
 
-type spotifySongData struct {
+type SpotifySongData struct {
 	ID     string `json:"id"`
 	Title  string `json:"title"`
 	Artist string `json:"artist"`
 }
 
-func fetchSpotifySongs(playlistID string) (songs []spotifySongData, err error) {
+func FetchSpotifySongs(playlistID string) (songs []SpotifySongData, err error) {
 	collector := colly.NewCollector()
 	collector.OnHTML(".tracklist-row > .tracklist-col.name > .track-name-wrapper", func(e *colly.HTMLElement) {
 		children := e.DOM.Children()
@@ -26,7 +26,7 @@ func fetchSpotifySongs(playlistID string) (songs []spotifySongData, err error) {
 		artistName := artistContainer.Text()
 		albumLink, _ := albumContainer.Attr("href")
 
-		songs = append(songs, spotifySongData{
+		songs = append(songs, SpotifySongData{
 			albumLink + "-" + slug.Make(songName) + "-" + strconv.Itoa(len(songs)),
 			songName,
 			artistName,

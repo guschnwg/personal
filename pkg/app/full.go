@@ -1,18 +1,20 @@
-package main
+package app
 
 import (
 	"sync"
+
+	"github.com/guschnwg/personal/pkg/crawlers"
 )
 
 type fullSong struct {
-	Youtube youtubeSongData `json:"youtube"`
-	Lyrics  []string        `json:"lyrics"`
+	Youtube crawlers.YoutubeSongData `json:"youtube"`
+	Lyrics  []string                 `json:"lyrics"`
 
-	spotifySongData
+	crawlers.SpotifySongData
 }
 
 func fetchFull(playlistID string) (data []*fullSong, err error) {
-	songs, err := fetchSpotifySongs(playlistID)
+	songs, err := crawlers.FetchSpotifySongs(playlistID)
 	if err != nil {
 		return
 	}
@@ -21,13 +23,13 @@ func fetchFull(playlistID string) (data []*fullSong, err error) {
 	wg.Add(len(songs) * 2)
 
 	for _, s := range songs {
-		song := fullSong{youtubeSongData{}, []string{}, s}
+		song := fullSong{crawlers.YoutubeSongData{}, []string{}, s}
 		query := song.Title + " - " + song.Artist
 
 		go func() {
 			defer wg.Done()
 
-			lyrics, err := fetchLyrics(query)
+			lyrics, err := crawlers.FetchLyrics(query)
 			if err != nil {
 				return
 			}
@@ -37,7 +39,7 @@ func fetchFull(playlistID string) (data []*fullSong, err error) {
 		go func() {
 			defer wg.Done()
 
-			songs, err := fetchYoutubeSongs(query)
+			songs, err := crawlers.FetchYoutubeSongs(query)
 			if len(songs) == 0 || err != nil {
 				return
 			}

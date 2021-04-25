@@ -1,4 +1,4 @@
-package main
+package crawlers
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type youtubeSongData struct {
+type YoutubeSongData struct {
 	ID         string `json:"id"`
 	Uploader   string `json:"uploader"`
 	UploaderID string `json:"uploader_id"`
@@ -35,7 +35,7 @@ type youtubeSongData struct {
 	} `json:"formats"`
 }
 
-func fetchYoutubeSongs(query string) (songs []youtubeSongData, err error) {
+func FetchYoutubeSongs(query string) (songs []YoutubeSongData, err error) {
 	cmdData := exec.Command("youtube-dl", "--default-search", "ytsearch1:", "--skip-download", "--dump-json", "-4", query)
 	var out bytes.Buffer
 	cmdData.Stdout = &out
@@ -53,7 +53,7 @@ func fetchYoutubeSongs(query string) (songs []youtubeSongData, err error) {
 	results = results[0 : len(results)-1]
 
 	for _, item := range results {
-		var song youtubeSongData
+		var song YoutubeSongData
 
 		if err = json.Unmarshal([]byte(item), &song); err == nil {
 			songs = append(songs, song)
