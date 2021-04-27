@@ -194,6 +194,7 @@
         const [youtubeSong, setYoutubeSong] = useState(song.youtube);
         const [lyrics, setLyrics] = useState(song.lyrics);
         const [isHovered, setIsHovered] = useState(false);
+        const [forceLoadVideoURL, setForceLoadVideoURL] = useState(loadVideoURL);
         const [viewLyrics, setViewLyrics] = useState(false);
 
         const video = useRef();
@@ -256,10 +257,24 @@
                         height="240"
                         controls
                         poster="${youtubeSong ? youtubeSong.thumbnail : ""}"
-                        onMouseEnter="${() => setIsHovered(true)}"
-                        onMouseLeave="${() => setIsHovered(false)}"
+                        onMouseEnter="${() => setForceLoadVideoURL(true)}"
+                        onMouseLeave="${() => setForceLoadVideoURL(false)}"
                     >
-                        ${url && (loadVideoURL || isHovered) && html`
+                        <!--
+                            // Not sure about which of this ones...
+
+                            onMouseEnter="${() => setForceLoadVideoURL(true)}"
+                            onMouseLeave="${() => setForceLoadVideoURL(false)}"
+
+                            onClick="${() => {
+                                // Dont mess with this if we are already showing the video
+                                if (!loadVideoURL) {
+                                    setForceLoadVideoURL(true)
+                                }
+                            }}"
+                        -->
+
+                        ${url && (loadVideoURL || forceLoadVideoURL) && html`
                             <source
                                 src="${url}"
                                 type="video/mp4"
