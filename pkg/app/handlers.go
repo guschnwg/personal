@@ -149,11 +149,7 @@ func BindProxy(r *mux.Router) {
 			}).Dial,
 		},
 		ModifyResponse: func(r *http.Response) error {
-			// loc := r.Header.Get("Location")
-			// if loc == "" {
-			// 	return nil
-			// }
-			r.Header.Set("Location", "oiiiiiii")
+			r.Header.Del("Location") // Otherwise it is redirected to the "correct" googlevideo's host
 			return nil
 		},
 	}
