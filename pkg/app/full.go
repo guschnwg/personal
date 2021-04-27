@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log"
 	"sync"
 
 	"github.com/guschnwg/personal/pkg/crawlers"
@@ -31,6 +32,7 @@ func fetchFull(playlistID string) (data []*fullSong, err error) {
 
 			lyrics, err := crawlers.FetchLyrics(query)
 			if err != nil {
+				log.Println(err)
 				return
 			}
 			song.Lyrics = lyrics
@@ -40,10 +42,14 @@ func fetchFull(playlistID string) (data []*fullSong, err error) {
 			defer wg.Done()
 
 			songs, err := crawlers.FetchYoutubeSongs(query)
-			if len(songs) == 0 || err != nil {
+			if err != nil {
+				log.Println(err)
 				return
 			}
 
+			if len(songs) == 0 {
+				return
+			}
 			song.Youtube = songs[0]
 		}()
 

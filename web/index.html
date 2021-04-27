@@ -166,26 +166,28 @@
     import { h, Component, render, useEffect, useState, useRef } from 'https://npm.reversehttp.com/preact,preact/hooks';
     import htm from 'https://unpkg.com/htm?module';
 
-    const EMOJIS = [
+    window.USE_PROXY = true;
+    window.USE_CACHE = true;
+    window.EMOJIS = [
         '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸',
         '🐵', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴',
         '🦄', '🐝', '🐛', '🦋', '🐌', '🐞'
     ];
 
     function fetchAll(id = '') {
-        return fetch('/api/full?playlist=' + id).then(res => res.json())
+        return fetch('/api/full?playlist=' + id + (window.USE_CACHE ? '' : '&no_cache=1')).then(res => res.json())
     }
 
     function fetchSpotifyPlaylist(id = '') {
-        return fetch('/api/spotify?playlist=' + id).then(res => res.json())
+        return fetch('/api/spotify?playlist=' + id + (window.USE_CACHE ? '' : '&no_cache=1')).then(res => res.json())
     }
 
     function fetchYoutubeSong(artist = '', title = '') {
-        return fetch('/api/youtube?artist=' + artist + '&title=' + title).then(res => res.json())
+        return fetch('/api/youtube?artist=' + artist + '&title=' + title + (window.USE_CACHE ? '' : '&no_cache=1')).then(res => res.json())
     }
 
     function fetchLyrics(artist = '', title = '') {
-        return fetch('/api/lyrics?artist=' + artist + '&title=' + title).then(res => res.json())
+        return fetch('/api/lyrics?artist=' + artist + '&title=' + title + (window.USE_CACHE ? '' : '&no_cache=1')).then(res => res.json())
     }
 
     const html = htm.bind(h);
@@ -288,9 +290,11 @@
         let url = "";
         if (youtubeSong && youtubeSong.formats) {
             url = new URL(youtubeSong.formats[youtubeSong.formats.length - 1].url);
-            url.search += "&host=" + url.host;
-            url.host = window.location.host;
-            url.protocol = window.location.protocol;
+            if (window.USE_PROXY) {
+                url.search += "&host=" + url.host;
+                url.host = window.location.host;
+                url.protocol = window.location.protocol;
+            }
         }
 
         return html`
@@ -345,17 +349,17 @@
     }
 
     function Loading() {
-        const [emojis, setEmojis] = useState([EMOJIS[0], EMOJIS[13]]);
+        const [emojis, setEmojis] = useState([window.EMOJIS[0], window.EMOJIS[13]]);
 
         useEffect(() => {
             let indexOne = 0;
             let indexTwo = 13;
 
             const interval = setInterval(() => {
-                indexOne = (indexOne + 1) % EMOJIS.length;
-                indexTwo = (indexTwo + 1) % EMOJIS.length;
+                indexOne = (indexOne + 1) % window.EMOJIS.length;
+                indexTwo = (indexTwo + 1) % window.EMOJIS.length;
 
-                setEmojis([EMOJIS[indexOne], EMOJIS[indexTwo]]);
+                setEmojis([window.EMOJIS[indexOne], window.EMOJIS[indexTwo]]);
             }, 100);
 
             return () => {
