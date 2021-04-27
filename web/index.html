@@ -286,7 +286,7 @@
         }, [song]);
 
         let url = "";
-        if (youtubeSong) {
+        if (youtubeSong && youtubeSong.formats) {
             url = new URL(youtubeSong.formats[youtubeSong.formats.length - 1].url);
             url.search += "&host=" + url.host;
             url.host = window.location.host;
