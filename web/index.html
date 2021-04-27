@@ -45,17 +45,28 @@
         button:focus {
             outline: 1px solid red;
         }
+        button.small {
+            font-size: 12px;
+            padding: 0 10px;
+            height: 32px;
+            border-radius: 32px;
+            line-height: 32px;
+            font-weight: normal;
+        }
 
         .container {
             height: 100vh;
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
+
+            border: 5px solid #1db954;
         }
 
         .filter {
             display: flex;
             padding: 10px;
+            border-bottom: 1px solid #1db9549e;
         }
 
         .songs {
@@ -92,11 +103,17 @@
             flex-direction: column;
         }
 
+        .view-lyrics {
+            place-self: center;
+            margin: auto;
+        }
+
         .current {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 10px;
+            border-top: 1px solid #1db9549e;
         }
         .current > .song > .info {
             margin-left: 10px;
@@ -164,9 +181,11 @@
 
     const html = htm.bind(h);
 
-    function Song({ song, isPlaying, isPaused, onStart, onPause, onEnd }) {
+    function Song({ song, loadVideoURL, isPlaying, isPaused, onStart, onPause, onEnd }) {
         const [youtubeSong, setYoutubeSong] = useState(song.youtube);
         const [lyrics, setLyrics] = useState(song.lyrics);
+        const [isHovered, setIsHovered] = useState(false);
+        const [viewLyrics, setViewLyrics] = useState(false);
 
         const video = useRef();
 
@@ -222,8 +241,16 @@
         return html`
             <div class="song">
                 <div class="video-container">
-                    <video ref=${video} width="320" height="240" controls poster="${youtubeSong ? youtubeSong.thumbnail : ""}">
-                        ${url && html`
+                    <video
+                        ref=${video}
+                        width="320"
+                        height="240"
+                        controls
+                        poster="${youtubeSong ? youtubeSong.thumbnail : ""}"
+                        onMouseEnter="${() => setIsHovered(true)}"
+                        onMouseLeave="${() => setIsHovered(false)}"
+                    >
+                        ${url && (loadVideoURL || isHovered) && html`
                             <source
                                 src="${url}"
                                 type="video/mp4"
@@ -238,7 +265,14 @@
 
                     ${lyrics && html`
                         <div class="song-lyrics" >
-                            ${lyrics.map(phrase => html`<span>${phrase}</span>`)}
+                            ${viewLyrics && lyrics.map(phrase => html`<span>${phrase}</span>`)}
+
+                            <button
+                                class="view-lyrics outline small"
+                                onClick="${() => setViewLyrics(v => !v)}"
+                            >
+                                ${viewLyrics ? "Hide" : "Show"} Lyrics
+                            </button>
                         </div>
                     `}
                 </div>
@@ -337,12 +371,18 @@
                 ${loading && html`<${Loading} />`}
 
                 <div class="songs">
-                    ${songs.map((song, index) => (
-                        html`
+                    ${songs.map((song, index) => {
+                        const isPlaying = playing === song.id;
+                        const isNext = false;
+                        const isPrev = false;
+                        const shouldLoadVideoURL = isPlaying || isNext || isPrev;
+
+                        return html`
                             <${Song}
                                 key="${song.id}"
                                 song="${song}"
-                                isPlaying="${playing === song.id}"
+                                loadVideoURL="${shouldLoadVideoURL}"
+                                isPlaying="${isPlaying}"
                                 isPaused="${paused}"
                                 onPause="${() => setPaused(true)}"
                                 onStart="${() => {
@@ -351,8 +391,8 @@
                                 }}"
                                 onEnd="${() => handleNext(index)}"
                             />
-                        `
-                    ))}
+                        `;
+                    })}
                 </div>
 
                 ${playing && (
