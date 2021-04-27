@@ -148,6 +148,14 @@ func BindProxy(r *mux.Router) {
 				Timeout: 50 * time.Second,
 			}).Dial,
 		},
+		ModifyResponse: func(r *http.Response) error {
+			// loc := r.Header.Get("Location")
+			// if loc == "" {
+			// 	return nil
+			// }
+			r.Header.Set("Location", "oiiiiiii")
+			return nil
+		},
 	}
 
 	r.HandleFunc("/videoplayback", func(w http.ResponseWriter, r *http.Request) {
