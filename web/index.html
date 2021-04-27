@@ -190,24 +190,16 @@
 
     const html = htm.bind(h);
 
-    function Song({ song, loadVideoURL, isPlaying, isPaused, onStart, onPause, onEnd }) {
-        const [youtubeSong, setYoutubeSong] = useState(song.youtube);
-        const [lyrics, setLyrics] = useState(song.lyrics);
-        const [isHovered, setIsHovered] = useState(false);
-        const [forceLoadVideoURL, setForceLoadVideoURL] = useState(loadVideoURL);
-        const [viewLyrics, setViewLyrics] = useState(false);
-
+    function Video({ url, thumbnail, loadVideoURL, isPlaying, isPaused, onStart, onPause, onEnd }) {
         const video = useRef();
+        const [forceLoadVideoURL, setForceLoadVideoURL] = useState(loadVideoURL);
 
-        useEffect(() => {
-            if (!song.youtube) {
-                fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
-            }
-            if (!song.lyrics) {
-                fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
-            }
-        }, [song]);
-
+        // BEGIN: work on this logic...
+        // This is to handle plays, pauses, and stuff like that from outside,
+        // not sure the best way to handle this right now
+        // for now it is handling twice the plays (i guess), gotta work on this
+        // probably will keep a state locally and deal with isPlaying and isPaused
+        // but that is an issue for later, for now it is mostly working...
         useEffect(() => {
             if (!video.current) return;
 
@@ -230,6 +222,7 @@
                 }
             }
         }, [isPaused, isPlaying, video.current])
+        // END: work on this logic...
 
         useEffect(() => {
             // Handle video events
@@ -239,6 +232,58 @@
             video.current.onplay = onStart
             video.current.onpaused = onPause
         }, [video.current])
+
+        return html`
+            <video
+                ref=${video}
+                width="320"
+                height="240"
+                controls
+                poster="${thumbnail}"
+
+                onMouseEnter="${() => setForceLoadVideoURL(true)}"
+                onMouseLeave="${() => setForceLoadVideoURL(false)}"
+            >
+                <!--
+                    // Not sure about which of this ones...
+                    // Basically this tells me to load the URL on some user interaction
+                    // The click would make the user click twice to play the video in the first play
+                    // The mouse enter/leave could trigger a lot of animations on the screen
+
+                    onMouseEnter="${() => setForceLoadVideoURL(true)}"
+                    onMouseLeave="${() => setForceLoadVideoURL(false)}"
+
+                    onClick="${() => {
+                        // Dont mess with this if we are already showing the video
+                        if (!loadVideoURL) {
+                            setForceLoadVideoURL(true)
+                        }
+                    }}"
+                -->
+
+                ${url && (loadVideoURL || forceLoadVideoURL) && html`
+                    <source
+                        src="${url}"
+                        type="video/mp4"
+                    />
+                `}
+            </video>
+        `
+    }
+
+    function Song({ song, loadVideoURL, isPlaying, isPaused, onStart, onPause, onEnd }) {
+        const [youtubeSong, setYoutubeSong] = useState(song.youtube);
+        const [lyrics, setLyrics] = useState(song.lyrics);
+        const [viewLyrics, setViewLyrics] = useState(false);
+
+        useEffect(() => {
+            if (!song.youtube) {
+                fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
+            }
+            if (!song.lyrics) {
+                fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
+            }
+        }, [song]);
 
         let url = "";
         if (youtubeSong) {
@@ -251,36 +296,15 @@
         return html`
             <div class="song">
                 <div class="video-container">
-                    <video
-                        ref=${video}
-                        width="320"
-                        height="240"
-                        controls
-                        poster="${youtubeSong ? youtubeSong.thumbnail : ""}"
-                        onMouseEnter="${() => setForceLoadVideoURL(true)}"
-                        onMouseLeave="${() => setForceLoadVideoURL(false)}"
-                    >
-                        <!--
-                            // Not sure about which of this ones...
-
-                            onMouseEnter="${() => setForceLoadVideoURL(true)}"
-                            onMouseLeave="${() => setForceLoadVideoURL(false)}"
-
-                            onClick="${() => {
-                                // Dont mess with this if we are already showing the video
-                                if (!loadVideoURL) {
-                                    setForceLoadVideoURL(true)
-                                }
-                            }}"
-                        -->
-
-                        ${url && (loadVideoURL || forceLoadVideoURL) && html`
-                            <source
-                                src="${url}"
-                                type="video/mp4"
-                            />
-                        `}
-                    </video>
+                    <${Video}
+                        url="${url}"
+                        thumbnail="${youtubeSong ? youtubeSong.thumbnail : ""}"
+                        isPlaying="${isPlaying}"
+                        isPaused="${isPaused}"
+                        onStart="${onStart}"
+                        onPause="${onPause}"
+                        onEnd="${onEnd}"
+                    />
                 </div>
 
 
