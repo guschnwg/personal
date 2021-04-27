@@ -414,7 +414,7 @@
                     <input
                         placeholder="https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA"
                         value="${playlistURL}"
-                        onChange="${event => setPlaylistURL(event.target.value)}"
+                        onInput="${event => setPlaylistURL(event.target.value)}"
                     />
 
                     <button onClick="${fetchPlaylist}">SEARCH</button>
