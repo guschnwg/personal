@@ -78,6 +78,8 @@
         .song {
             display: flex;
             align-items: center;
+            height: 240px;
+            border-bottom: 1px solid #1b8f4540;
         }
 
         .video-container {}
@@ -87,6 +89,8 @@
             flex-direction: column;
             padding: 10px;
             width: 100%;
+            height: 100%;
+            box-sizing: border-box;
         }
 
         .song-details>h3 {
@@ -94,7 +98,7 @@
         }
 
         .song-lyrics {
-            height: 160px;
+            height: 100%;
             overflow: auto;
             padding: 10px;
             width: 100%;
@@ -115,15 +119,20 @@
             padding: 10px;
             border-top: 1px solid #1db9549e;
         }
-        .current > .song > .info {
+        .current > .song-playing {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .current > .song-playing > .info {
             margin-left: 10px;
             display: flex;
             flex-direction: column;
         }
-        .current > .song > .info > .title {
+        .current > .song-playing > .info > .title {
             font-size: 20px;
         }
-        .current > .song > .info > .artist {
+        .current > .song-playing > .info > .artist {
             font-size: 14px;
             color: #8e8e8e;
         }
@@ -283,7 +292,7 @@
         return html`
             <div class="current">
                 <button class="outline" onClick="${onPrev}">⏮</button>
-                <div class="song">
+                <div class="song-playing">
                     <button onClick="${isPaused ? onPlay : onPause}">⏯</button>
 
                     <div class="info">
