@@ -78,11 +78,18 @@
         .song {
             display: flex;
             align-items: center;
-            height: 240px;
+            height: 260px;
             border-bottom: 1px solid #1b8f4540;
         }
 
-        .video-container {}
+        .video-container {
+            padding: 20px;
+        }
+
+        .video-container > video {
+            vertical-align: middle;
+            object-fit: cover;
+        }
 
         .song-details {
             display: flex;
@@ -93,14 +100,15 @@
             box-sizing: border-box;
         }
 
-        .song-details>h3 {
+        .song-details > h3 {
             margin: 0;
+            margin-bottom: 20px;
         }
 
         .song-lyrics {
             height: 100%;
             overflow: auto;
-            padding: 10px;
+            margin-bottom: 10px;
             width: 100%;
 
             display: flex;
