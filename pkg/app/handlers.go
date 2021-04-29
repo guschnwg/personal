@@ -10,7 +10,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/guschnwg/personal/pkg/crawlers"
+	"github.com/guschnwg/personal/pkg/database"
 	"github.com/patrickmn/go-cache"
+	"gopkg.in/guregu/null.v4"
 )
 
 var c = cache.New(5*time.Minute, 10*time.Minute)
@@ -127,6 +129,66 @@ func FullHandler(w http.ResponseWriter, r *http.Request) {
 
 	c.Set(cacheKey, data, cache.DefaultExpiration)
 	json.NewEncoder(w).Encode(map[string]interface{}{"results": data})
+}
+
+func DatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	db := database.DB()
+
+	users := []database.User{}
+	db.Find(&users)
+
+	if len(users) == 0 {
+		user := database.User{
+			Name:  "Gustavo Zanardini",
+			Email: "gustavo.zanardini@email.com",
+		}
+		db.Create(&user)
+		db.Find(&users)
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": users})
+}
+
+func ClearDatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	db := database.DB()
+
+	db.Where("1 = 1").Delete(database.User{})
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": true})
+}
+
+func ToggleActivateUserHandler(w http.ResponseWriter, r *http.Request) {
+	db := database.DB()
+
+	user := database.User{}
+	db.First(&user)
+	user.ActivatedAt = null.NewTime(time.Now(), user.ActivatedAt.IsZero())
+	db.Save(&user)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": user})
+}
+
+type createUserBody struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	var body createUserBody
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := database.DB()
+	user := database.User{
+		Name:  body.Name,
+		Email: body.Email,
+	}
+	tx := db.Create(&user)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": user, "error": tx.Error})
 }
 
 func BindProxy(r *mux.Router) {

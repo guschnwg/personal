@@ -8,15 +8,25 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/guschnwg/personal/pkg/app"
+	"github.com/guschnwg/personal/pkg/database"
 )
 
 func main() {
+	db := database.DB()
+	database.Migrate(db)
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", app.IndexHandler)
-	r.HandleFunc("/api/spotify", app.SpotifyHandler)
-	r.HandleFunc("/api/youtube", app.YoutubeHandler)
-	r.HandleFunc("/api/lyrics", app.LyricsHandler)
-	r.HandleFunc("/api/full", app.FullHandler)
+	r.HandleFunc("/api/spotify", app.SpotifyHandler).Methods("GET")
+	r.HandleFunc("/api/youtube", app.YoutubeHandler).Methods("GET")
+	r.HandleFunc("/api/lyrics", app.LyricsHandler).Methods("GET")
+	r.HandleFunc("/api/full", app.FullHandler).Methods("GET")
+
+	r.HandleFunc("/api/db", app.DatabaseHandler).Methods("GET")
+	r.HandleFunc("/api/db/clear", app.ClearDatabaseHandler).Methods("GET")
+	r.HandleFunc("/api/db/toggle", app.ToggleActivateUserHandler).Methods("GET")
+
+	r.HandleFunc("/api/users/create", app.CreateUserHandler).Methods("POST")
 
 	app.BindProxy(r)
 
