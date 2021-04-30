@@ -411,6 +411,8 @@
 
                 <div class="songs">
                     ${songs.map((song, index) => {
+                        const isPlaying = playing === song.id;
+
                         return html`
                             <${Song}
                                 key="${song.id}"
