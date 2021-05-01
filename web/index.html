@@ -54,6 +54,13 @@
             font-weight: normal;
         }
 
+        .checkbox-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 5px;
+        }
+
         .container {
             height: 100vh;
             display: flex;
@@ -203,44 +210,24 @@
     function Video({ url, thumbnail, isPlaying, isPaused, onStart, onPause, onEnd }) {
         const video = useRef();
 
-        // BEGIN: work on this logic...
-        // This is to handle plays, pauses, and stuff like that from outside,
-        // not sure the best way to handle this right now
-        // for now it is handling twice the plays (i guess), gotta work on this
-        // probably will keep a state locally and deal with isPlaying and isPaused
-        // but that is an issue for later, for now it is mostly working...
         useEffect(() => {
             if (!video.current) return;
 
-            if (isPlaying) {
-                video.current.play();
-            } else {
-                video.current.pause();
-                video.current.currentTime = 0;
-            }
-        }, [isPlaying, video.current])
-
-        useEffect(() => {
-            if (!video.current) return;
+            video.current.onended = onEnd;
+            video.current.onplay = onStart;
+            video.current.onpaused = onPause;
 
             if (isPaused) {
                 video.current.pause();
             } else {
                 if (isPlaying) {
                     video.current.play();
+                } else {
+                    video.current.pause();
+                    video.current.currentTime = 0;
                 }
             }
-        }, [isPaused, isPlaying, video.current])
-        // END: work on this logic...
-
-        useEffect(() => {
-            // Handle video events
-            if (!video.current) return;
-
-            video.current.onended = onEnd
-            video.current.onplay = onStart
-            video.current.onpaused = onPause
-        }, [video.current])
+        }, [isPaused, isPlaying, video.current]);
 
         return html`
             <video
@@ -261,22 +248,12 @@
     }
 
     function Song({ song, isPlaying, isPaused, onStart, onPause, onEnd }) {
-        const [youtubeSong, setYoutubeSong] = useState(song.youtube);
-        const [lyrics, setLyrics] = useState(song.lyrics);
         const [viewLyrics, setViewLyrics] = useState(false);
 
-        useEffect(() => {
-            if (!song.youtube) {
-                fetchYoutubeSong(song.artist, song.title).then(data => setYoutubeSong(data.results));
-            }
-            if (!song.lyrics) {
-                fetchLyrics(song.artist, song.title).then(data => setLyrics(data.results));
-            }
-        }, [song]);
-
         let url = "";
-        if (youtubeSong && youtubeSong.formats) {
-            url = new URL(youtubeSong.formats[youtubeSong.formats.length - 1].url);
+        if (song.youtube && song.youtube.formats) {
+            url = new URL(song.youtube.formats[song.youtube.formats.length - 1].url);
+
             if (window.USE_PROXY) {
                 url.search += "&host=" + url.host;
                 url.host = window.location.host;
@@ -289,7 +266,7 @@
                 <div class="video-container">
                     <${Video}
                         url="${url}"
-                        thumbnail="${youtubeSong ? youtubeSong.thumbnail : ""}"
+                        thumbnail="${song.youtube ? song.youtube.thumbnail : ""}"
                         isPlaying="${isPlaying}"
                         isPaused="${isPaused}"
                         onStart="${onStart}"
@@ -302,9 +279,9 @@
                 <div class="song-details">
                     <h3>${song.artist} - ${song.title}</h3>
 
-                    ${lyrics && html`
+                    ${song.lyrics && html`
                         <div class="song-lyrics" >
-                            ${viewLyrics && lyrics.map(phrase => html`<span>${phrase}</span>`)}
+                            ${viewLyrics && song.lyrics.map(phrase => html`<span>${phrase}</span>`)}
 
                             <button
                                 class="view-lyrics outline small"
@@ -367,6 +344,7 @@
         const [songs, setSongs] = useState([]);
         const [playing, setPlaying] = useState();
         const [paused, setPaused] = useState(false);
+        const [autoplay, setAutoplay] = useState(false);
 
         const fetchPlaylist = () => {
             let playlistID = '';
@@ -380,7 +358,9 @@
             fetchAll(playlistID).then(data => {
                 const newSongs = data.results;
                 setSongs(newSongs);
-                setPlaying(newSongs.length > 0 ? newSongs[0].id : undefined);
+                if (autoplay) {
+                    setPlaying(newSongs.length > 0 ? newSongs[0].id : undefined);
+                }
                 setLoading(false);
             }).catch(() => setLoading(false));
         };
@@ -403,6 +383,17 @@
                         value="${playlistURL}"
                         onInput="${event => setPlaylistURL(event.target.value)}"
                     />
+
+                    <div class="checkbox-container">
+                        <input
+                            type="checkbox"
+                            id="autoplay"
+                            name="autoplay"
+                            checked="${autoplay}"
+                            onChange="${() => setAutoplay(v => !v)}"
+                        />
+                        <label for="autoplay">Autoplay?</label>
+                    </div>
 
                     <button onClick="${fetchPlaylist}">SEARCH</button>
                 </div>
@@ -457,7 +448,6 @@
             document.title = `${originalTitle} ${EMOJIS[index]}`;
         }
     }
-
     setInterval(titlePlay(), 500);
 </script>
 
