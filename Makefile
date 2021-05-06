@@ -7,13 +7,8 @@ run:
 	PORT=8000 DATABASE_URL=$(HEROKU_DATABASE_URL) gow run -v cmd/app/main.go pkg/*
 
 docker_build:
-	docker build -t go-app .
+	docker compose build
 docker_run:
-	docker run \
-	-p 8000:8000 \
-	--env PORT=8000 \
-	--env DATABASE_URL=$(HEROKU_DATABASE_URL) \
-	--name go-app \
-	-it \
-	--rm \
-	go-app
+	docker compose run \
+		-e DATABASE_URL=$(HEROKU_DATABASE_URL) \
+		web
