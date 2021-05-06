@@ -16,7 +16,6 @@ func main() {
 	database.Migrate(db)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", app.IndexHandler)
 	r.HandleFunc("/api/spotify", app.SpotifyHandler).Methods("GET")
 	r.HandleFunc("/api/youtube", app.YoutubeHandler).Methods("GET")
 	r.HandleFunc("/api/lyrics", app.LyricsHandler).Methods("GET")
@@ -26,13 +25,16 @@ func main() {
 	r.HandleFunc("/api/db/clear", app.ClearDatabaseHandler).Methods("GET")
 	r.HandleFunc("/api/db/toggle", app.ToggleActivateUserHandler).Methods("GET")
 
+	r.HandleFunc("/api/webhook", app.WebHookHandler).Methods("GET")
+
 	r.HandleFunc("/api/users/create", app.CreateUserHandler).Methods("POST")
+
+	r.PathPrefix("/api").HandlerFunc(http.NotFound)
 
 	app.BindProxy(r)
 
 	r.PathPrefix("/static/").Handler(app.StaticHandler())
-
-	http.Handle("/", r)
+	r.PathPrefix("/").HandlerFunc(app.IndexHandler)
 
 	port := os.Getenv("PORT")
 	log.Fatal(http.ListenAndServe(":"+port, r))

@@ -45,6 +45,7 @@ func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
 	if artist == "" {
 		artist = "Oliver Schories"
 	}
+
 	title := r.URL.Query().Get("title")
 	if title == "" {
 		title = "One More Dance, Jules"
@@ -101,7 +102,7 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "web/index.html")
+	http.ServeFile(w, r, "web/static/index.html")
 }
 
 func StaticHandler() http.Handler {
@@ -219,4 +220,12 @@ func BindProxy(r *mux.Router) {
 	r.HandleFunc("/videoplayback", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 	})
+}
+
+func PingHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": "PONG"})
+}
+
+func WebHookHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": "PONG"})
 }
