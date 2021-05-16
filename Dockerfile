@@ -7,10 +7,17 @@ WORKDIR /app
 
 RUN make build
 
+FROM node:12.20.1 AS front
+
+COPY web/front /app
+WORKDIR /app
+
+RUN npm run build
+
 FROM python:3.8-buster AS dist
 
 COPY --from=base /app/app.out /
-COPY --from=base /app/web/ /web/
+COPY --from=front /app/build/ /web/static/
 
 RUN pip install youtube_dl
 
