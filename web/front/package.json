@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "preact build --no-prerender",
-    "dev": "nodemon --exec 'preact build --dest ../static --no-prerender' -e 'js json jsx'",
+    "dev": "nodemon --legacy-watch --exec 'preact build --dest ../static --no-prerender' -e 'js json jsx'",
     "lint": "eslint src",
     "test": "jest"
   },

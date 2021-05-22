@@ -24,13 +24,7 @@ docker-run:
 		go-app
 
 docker-dev:
-	docker build --file Dockerfile.dev --tag go-app-dev .
-	docker run \
-		-p 8000:8000 \
-		--env PORT=8000 \
-		--env DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
-		--name go-app-dev \
-		-it \
-		--rm \
-		--volume $(shell pwd):/app:consistent  \
-		go-app-dev
+	docker compose build
+	PORT=8000 \
+	DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
+	docker compose up

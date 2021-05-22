@@ -1,0 +1,10 @@
+FROM node:12.20.1 AS base
+
+COPY . /app
+WORKDIR /app/web/front
+
+RUN npm install
+
+WORKDIR /app
+
+CMD make front-run
