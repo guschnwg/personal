@@ -7,7 +7,7 @@ WORKDIR /app
 
 RUN make build
 
-FROM node:12.20.1 AS front
+FROM node:14.17.0 AS front
 
 COPY web/front /app
 WORKDIR /app
