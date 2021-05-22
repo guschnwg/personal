@@ -12,6 +12,7 @@ FROM node:14.17.0 AS front
 COPY web/front /app
 WORKDIR /app
 
+RUN npm install
 RUN npm run build
 
 FROM python:3.8-buster AS dist
