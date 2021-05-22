@@ -6,7 +6,7 @@ ENV HEROKU_DATABASE_URL ''
 RUN apt-get update
 RUN apt-get install -y python3 python3-pip
 
-RUN go get -u github.com/silenceper/gowatch
+RUN go get -u github.com/loov/watchrun
 RUN pip3 install youtube_dl
 
 COPY . /app
