@@ -4,8 +4,8 @@ services:
             context: .
             dockerfile: Dockerfile.back
         environment:
-            - PORT
-            - DATABASE_URL
+            - PORT=${PORT}
+            - DATABASE_URL=${DATABASE_URL}
         ports:
             - "8000:8000"
         volumes:

@@ -1,12 +1,12 @@
 FROM golang:1.15.7 AS base
 
 ENV PORT 8000
-ENV HEROKU_DATABASE_URL ''
+ENV DATABASE_URL 'lalala'
 
 RUN apt-get update
 RUN apt-get install -y python3 python3-pip
 
-RUN go get -u github.com/loov/watchrun
+RUN go get github.com/githubnemo/CompileDaemon
 RUN pip3 install youtube_dl
 
 COPY . /app
@@ -14,4 +14,4 @@ WORKDIR /app
 
 RUN go mod tidy
 
-CMD make run
+CMD make PORT=${PORT} DATABASE_URL=${DATABASE_URL} run

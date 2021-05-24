@@ -1,9 +1,19 @@
+PORT=8000
+
 build:
 	GO111MODULE=on go build -o ./app.out cmd/app/main.go
 run:
-	GO111MODULE=on watchrun go run cmd/app/main.go
+	GO111MODULE=on \
+	CompileDaemon \
+		-polling \
+		-verbose \
+		-build="go build cmd/app/main.go" \
+		-exclude-dir=.git \
+		-exclude-dir=web/front \
+		-exclude-dir=app/web/front \
+		-command="./main"
 run-local:
-	GO111MODULE=on PORT=8000 DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) watchrun go run cmd/app/main.go
+	make PORT=8000 DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) run
 
 front-build:
 	cd web/front && npm run build
@@ -15,8 +25,8 @@ docker-build:
 	docker build --tag go-app .
 docker-run:
 	docker run \
-		-p 8000:8000 \
-		--env PORT=8000 \
+		-p $(PORT):$(PORT) \
+		--env PORT=$(PORT) \
 		--env DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
 		--name go-app \
 		-it \
@@ -25,6 +35,5 @@ docker-run:
 
 docker-dev:
 	docker compose build
-
-	PORT=8000 DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
+	PORT=$(PORT) DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
 		docker compose up
