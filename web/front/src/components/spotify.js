@@ -1,8 +1,4 @@
-import { h } from 'preact';
 import { useEffect, useState, useRef } from 'preact/hooks';
-import htm from 'htm';
-
-const html = htm.bind(h);
 
 window.USE_PROXY = true;
 window.USE_CACHE = true;
@@ -11,6 +7,16 @@ window.EMOJIS = [
     '🐵', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴',
     '🦄', '🐝', '🐛', '🦋', '🐌', '🐞'
 ];
+
+function titlePlay() {
+    let index = 0;
+    const originalTitle = document.title;
+
+    return () => {
+        index = (index + 1) % EMOJIS.length;
+        document.title = `${originalTitle} ${EMOJIS[index]}`;
+    }
+}
 
 function fetchAll(id = '') {
     return fetch('/api/full?playlist=' + id + (window.USE_CACHE ? '' : '&no_cache=1')).then(res => res.json())
@@ -50,22 +56,23 @@ function Video({ url, thumbnail, isPlaying, isPaused, onStart, onPause, onEnd })
         }
     }, [isPaused, isPlaying, video.current]);
 
-    return html`
+    return (
         <video
-            ref=${video}
+            ref={video}
             width="320"
             height="240"
             controls
-            poster="${thumbnail}"
+            poster={thumbnail}
+            preload="none"
         >
-            ${url && html`
+            {url && (
                 <source
-                    src="${url}"
+                    src={url}
                     type="video/mp4"
                 />
-            `}
+            )}
         </video>
-    `
+    )
 }
 
 function Song({ song, isPlaying, isPaused, onStart, onPause, onEnd }) {
@@ -82,56 +89,56 @@ function Song({ song, isPlaying, isPaused, onStart, onPause, onEnd }) {
         }
     }
 
-    return html`
+    return (
         <div class="song">
             <div class="video-container">
-                <${Video}
-                    url="${url}"
-                    thumbnail="${song.youtube ? song.youtube.thumbnail : ""}"
-                    isPlaying="${isPlaying}"
-                    isPaused="${isPaused}"
-                    onStart="${onStart}"
-                    onPause="${onPause}"
-                    onEnd="${onEnd}"
+                <Video
+                    url={url}
+                    thumbnail={song.youtube ? song.youtube.thumbnail : ""}
+                    isPlaying={isPlaying}
+                    isPaused={isPaused}
+                    onStart={onStart}
+                    onPause={onPause}
+                    onEnd={onEnd}
                 />
             </div>
 
 
             <div class="song-details">
-                <h3>${song.artist} - ${song.title}</h3>
+                <h3>{song.artist} - {song.title}</h3>
 
-                ${song.lyrics && html`
+                {song.lyrics && (
                     <div class="song-lyrics" >
-                        ${viewLyrics && song.lyrics.map(phrase => html`<span>${phrase}</span>`)}
+                        {viewLyrics && song.lyrics.map(phrase => <span>{phrase}</span>)}
 
                         <button
                             class="view-lyrics outline small"
-                            onClick="${() => setViewLyrics(v => !v)}"
+                            onClick={() => setViewLyrics(v => !v)}
                         >
-                            ${viewLyrics ? "Hide" : "Show"} Lyrics
+                            {viewLyrics ? "Hide" : "Show"} Lyrics
                         </button>
                     </div>
-                `}
+                )}
             </div>
         </div>
-    `;
+    );
 }
 
 function Current({ song, isPaused, onPlay, onPause, onPrev, onNext }) {
-    return html`
+    return (
         <div class="current">
-            <button class="outline" onClick="${onPrev}">⏮</button>
+            <button class="outline" onClick={onPrev}>⏮</button>
             <div class="song-playing">
-                <button onClick="${isPaused ? onPlay : onPause}">⏯</button>
+                <button onClick={isPaused ? onPlay : onPause}>⏯</button>
 
                 <div class="info">
-                    <span class="title">${song.title}</span>
-                    <span class="artist">${song.artist}</span>
+                    <span class="title">{song.title}</span>
+                    <span class="artist">{song.artist}</span>
                 </div>
             </div>
-            <button class="outline" onClick="${onNext}">⏭</button>
+            <button class="outline" onClick={onNext}>⏭</button>
         </div>
-    `;
+    );
 }
 
 function Loading() {
@@ -153,14 +160,14 @@ function Loading() {
         }
     }, [])
 
-    return html`
+    return (
         <div class="loading">
-            <span class="emoji">${emojis[0]}</span> Loading the most amazing stuff ever... <span class="emoji">${emojis[1]}</span>
+            <span class="emoji">{emojis[0]}</span> Loading the most amazing stuff ever... <span class="emoji">{emojis[1]}</span>
         </div>
-    `
+    )
 }
 
-function App() {
+function Spotify() {
     const [loading, setLoading] = useState(false);
     const [playlistURL, setPlaylistURL] = useState('https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA');
     const [songs, setSongs] = useState([]);
@@ -197,13 +204,21 @@ function App() {
         setPlaying(songs[nextIndex].id);
     }
 
-    return html`
+    useEffect(() => {
+        const interval = setInterval(titlePlay(), 500);
+
+        return () => {
+            clearInterval(interval);
+        }
+    }, []);
+
+    return (
         <div class="container">
             <div class="filter">
                 <input
                     placeholder="https://open.spotify.com/playlist/5sUXSWQyDifhDrXJ65vVMA"
-                    value="${playlistURL}"
-                    onInput="${event => setPlaylistURL(event.target.value)}"
+                    value={playlistURL}
+                    onInput={event => setPlaylistURL(event.target.value)}
                 />
 
                 <div class="checkbox-container">
@@ -211,63 +226,50 @@ function App() {
                         type="checkbox"
                         id="autoplay"
                         name="autoplay"
-                        checked="${autoplay}"
-                        onChange="${() => setAutoplay(v => !v)}"
+                        checked={autoplay}
+                        onChange={() => setAutoplay(v => !v)}
                     />
                     <label for="autoplay">Autoplay?</label>
                 </div>
 
-                <button onClick="${fetchPlaylist}">SEARCH</button>
+                <button onClick={fetchPlaylist}>SEARCH</button>
             </div>
 
-            ${loading && html`<${Loading} />`}
+            {loading && <Loading />}
 
             <div class="songs">
-                ${songs.map((song, index) => {
+                {songs.map((song, index) => {
                     const isPlaying = playing === song.id;
 
-                    return html`
-                        <${Song}
-                            key="${song.id}"
-                            song="${song}"
-                            isPlaying="${isPlaying}"
-                            isPaused="${paused}"
-                            onPause="${() => setPaused(true)}"
-                            onStart="${() => {
+                    return (
+                        <Song
+                            key={song.id}
+                            song={song}
+                            isPlaying={isPlaying}
+                            isPaused={paused}
+                            onPause={() => setPaused(true)}
+                            onStart={() => {
                                 setPlaying(song.id);
                                 setPaused(false);
-                            }}"
-                            onEnd="${() => handleNext(index)}"
+                            }}
+                            onEnd={() => handleNext(index)}
                         />
-                    `;
+                    );
                 })}
             </div>
 
-            ${playing && (
-                html`
-                    <${Current}
-                        song="${songs.find(s => s.id === playing)}"
-                        isPaused="${paused}"
-                        onPlay="${() => setPaused(false)}"
-                        onPause="${() => setPaused(true)}"
-                        onPrev="${() => handlePrev(songs.findIndex(s => s.id === playing))}"
-                        onNext="${() => handleNext(songs.findIndex(s => s.id === playing))}"
-                    />
-                `
+            {playing && (
+                <Current
+                    song={songs.find(s => s.id === playing)}
+                    isPaused={paused}
+                    onPlay={() => setPaused(false)}
+                    onPause={() => setPaused(true)}
+                    onPrev={() => handlePrev(songs.findIndex(s => s.id === playing))}
+                    onNext={() => handleNext(songs.findIndex(s => s.id === playing))}
+                />
             )}
-            </div>
-        `;
+        </div>
+    );
 }
 
-export default App;
-
-function titlePlay() {
-    let index = 0;
-    const originalTitle = document.title;
-
-    return () => {
-        index = (index + 1) % EMOJIS.length;
-        document.title = `${originalTitle} ${EMOJIS[index]}`;
-    }
-}
-setInterval(titlePlay(), 500);
+export default Spotify;
