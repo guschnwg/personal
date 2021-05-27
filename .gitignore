@@ -1,4 +1,5 @@
 app.out
 web/static
+web/front/build
 app
 main

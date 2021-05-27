@@ -1,13 +1,11 @@
 PORT=8000
 
-build:
-	GO111MODULE=on go build -o ./app.out cmd/app/main.go
 run:
 	GO111MODULE=on \
 	CompileDaemon \
 		-polling \
 		-verbose \
-		-build="go build cmd/app/main.go" \
+		-build="go build -o ./main cmd/app/main.go" \
 		-exclude-dir=.git \
 		-exclude-dir=web/front \
 		-exclude-dir=app/web/front \

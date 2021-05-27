@@ -5,6 +5,4 @@ WORKDIR /app/web/front
 
 RUN npm install
 
-WORKDIR /app
-
-CMD make front-run
+CMD npm run dev
