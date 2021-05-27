@@ -1,5 +1,7 @@
 PORT=8000
 
+build:
+	GO111MODULE=on go build -o ./main cmd/app/main.go
 run:
 	GO111MODULE=on \
 	CompileDaemon \
