@@ -1,4 +1,7 @@
 export default (config) => {
-  config.devServer.writeToDisk = true;
+  if (config.devServer) {
+    config.devServer.writeToDisk = true;
+  }
+
   config.output.publicPath = '/front/';
 };

@@ -18,7 +18,7 @@ RUN npm run build
 FROM python:3.8-buster AS dist
 
 COPY --from=base /app/main /
-COPY --from=front /app/build/ /web/static/
+COPY --from=front /app/build/ /web/front/build/
 
 RUN pip install youtube_dl
 

@@ -3,15 +3,7 @@ PORT=8000
 build:
 	GO111MODULE=on go build -o ./main cmd/app/main.go
 run:
-	GO111MODULE=on \
-	CompileDaemon \
-		-polling \
-		-verbose \
-		-build="go build -o ./main cmd/app/main.go" \
-		-exclude-dir=.git \
-		-exclude-dir=web/front \
-		-exclude-dir=app/web/front \
-		-command="./main"
+	GO111MODULE=on gowatch -p cmd/app/main.go -o main
 run-local:
 	make PORT=8000 DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) run
 
@@ -33,6 +25,7 @@ docker-run:
 		--rm \
 		go-app
 
+# If you run into issues with file watchers, disable use gRPC... in docker preferences
 docker-dev:
 	docker compose build
 	PORT=$(PORT) DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
