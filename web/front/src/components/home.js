@@ -3,13 +3,11 @@ function Home() {
         <span>
             HI!
 
-            <a href="/spotify">
-                Spotify
-            </a>
-
-            <a href="/audio">
-                Audio
-            </a>
+            <ul>
+                <li><a href="/spotify">Spotify</a></li>
+                <li><a href="/audio">Audio</a></li>
+                <li><a href="/webhook">WebHook</a></li>
+            </ul>
         </span>
     );
 }

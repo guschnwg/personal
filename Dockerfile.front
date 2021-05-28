@@ -3,6 +3,7 @@ FROM node:12.20.1 AS base
 COPY . /app
 WORKDIR /app/web/front
 
+RUN rm -rf node_modules
 RUN npm install
 
 CMD npm run dev

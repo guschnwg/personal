@@ -8,6 +8,7 @@ services:
             - DATABASE_URL=${DATABASE_URL}
         ports:
             - "8000:8000"
+            - "8080:8080"
         volumes:
             - .:/app
             - front_build:/app/web/front/build

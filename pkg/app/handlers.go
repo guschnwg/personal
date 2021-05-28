@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"github.com/guschnwg/personal/pkg/crawlers"
 	"github.com/guschnwg/personal/pkg/database"
 	"github.com/patrickmn/go-cache"
@@ -224,6 +226,34 @@ func BindProxy(r *mux.Router) {
 	r.HandleFunc("/videoplayback", func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
 	})
+}
+
+func BindWebSocket(r *mux.Router) {
+	var upgrader = websocket.Upgrader{}
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		for {
+			mt, message, err := c.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				break
+			}
+			log.Printf("recv: %s", message)
+			err = c.WriteMessage(mt, message)
+			if err != nil {
+				log.Println("write:", err)
+				break
+			}
+		}
+	}
+
+	r.HandleFunc("/websocket", handler)
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {

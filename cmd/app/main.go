@@ -32,6 +32,7 @@ func main() {
 	r.PathPrefix("/api").HandlerFunc(http.NotFound)
 
 	app.BindProxy(r)
+	app.BindWebSocket(r)
 
 	r.PathPrefix("/static/").Handler(app.StaticHandler())
 
