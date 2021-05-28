@@ -27,6 +27,6 @@ docker-run:
 
 # If you run into issues with file watchers, disable use gRPC... in docker preferences
 docker-dev:
-	docker compose build
+	docker compose build --no-cache
 	PORT=$(PORT) DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
-		docker compose up
+		docker compose up --force-recreate
