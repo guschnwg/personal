@@ -25,8 +25,6 @@ func main() {
 	r.HandleFunc("/api/db/clear", app.ClearDatabaseHandler).Methods("GET")
 	r.HandleFunc("/api/db/toggle", app.ToggleActivateUserHandler).Methods("GET")
 
-	r.HandleFunc("/api/webhook", app.WebHookHandler).Methods("GET")
-
 	r.HandleFunc("/api/users/create", app.CreateUserHandler).Methods("POST")
 
 	r.PathPrefix("/api").HandlerFunc(http.NotFound)

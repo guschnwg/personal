@@ -2,11 +2,13 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -228,8 +230,16 @@ func BindProxy(r *mux.Router) {
 	})
 }
 
+type client struct {
+	ID int
+	c  *websocket.Conn
+}
+
 func BindWebSocket(r *mux.Router) {
-	var upgrader = websocket.Upgrader{}
+	upgrader := websocket.Upgrader{}
+	idCount := 0
+
+	clients := []client{}
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
@@ -238,28 +248,71 @@ func BindWebSocket(r *mux.Router) {
 			return
 		}
 		defer c.Close()
+
+		id := idCount
+		c.WriteMessage(websocket.TextMessage, []byte(strconv.Itoa(id)))
+		c.SetCloseHandler(func(code int, text string) error {
+			newClients := []client{}
+			for _, client := range clients {
+				if client.ID != id {
+					newClients = append(newClients, client)
+				}
+			}
+			clients = newClients
+
+			for _, client := range clients {
+				client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("LEFT: %v", id)))
+			}
+
+			return nil
+		})
+
+		for _, client := range clients {
+			client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("JOINED: %v", id)))
+		}
+		clients = append(clients, client{id, c})
+
+		everyoneIDs := []int{}
+		for _, client := range clients {
+			everyoneIDs = append(everyoneIDs, client.ID)
+		}
+		for _, client := range clients {
+			client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("HERE: %v", everyoneIDs)))
+		}
+
+		idCount += 1
+
 		for {
 			mt, message, err := c.ReadMessage()
 			if err != nil {
-				log.Println("read:", err)
 				break
 			}
-			log.Printf("recv: %s", message)
-			err = c.WriteMessage(mt, message)
-			if err != nil {
-				log.Println("write:", err)
-				break
-			}
+
+			c.WriteMessage(mt, message)
 		}
 	}
 
+	externalHandler := func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, _ := strconv.Atoi(vars["id"])
+
+		for _, c := range clients {
+			if c.ID == id {
+				c.c.WriteMessage(websocket.TextMessage, []byte("HELLOOOOO"))
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintf(w, "ID: %v\n", id)
+				return
+			}
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, ":(")
+	}
+
 	r.HandleFunc("/websocket", handler)
+	r.HandleFunc("/websocket/{id}", externalHandler)
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]interface{}{"results": "PONG"})
-}
-
-func WebHookHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"results": "PONG"})
 }

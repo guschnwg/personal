@@ -1,29 +1,57 @@
-import { useEffect } from 'preact/hooks'
-
-const client = new WebSocket('ws://localhost:8000/websocket');
+import { useEffect, useState } from 'preact/hooks'
 
 function Webhook() {
+    const [connected, setConnected] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [client, setClient] = useState();
+    const [messages, setMessages] = useState([]);
+
     useEffect(() => {
+        const client = new WebSocket('ws://localhost:8000/websocket');
+
         client.onopen = () => {
-            console.log('WebSocket Client Connected');
-            client.send("HI");
+            setLoading(false);
+            setConnected(true);
         };
+
         client.onmessage = (message) => {
-            console.log(message);
+            setMessages(prev => [...prev, message.data]);
         };
-        client.onerror = console.error
+
+        client.onerror = (err) => {
+            setLoading(false);
+            setConnected(false);
+
+            console.error(err);
+        }
+
+        setClient(client);
+
+        return () => {
+            client.close();
+        }
     }, [])
 
     return (
         <span>
-            HI!
+            {loading && <span>Loading...</span>}
 
-            <a
-                href="https://github.com/mdn/webaudio-examples/blob/master/audio-analyser/index.html"
-                target="_blank"
-            >
-                Check this link
-            </a>
+            {!loading && (
+                connected ? (
+                    <div>
+                        <span>Connected!</span>
+                        <button onClick={() => client.send("lalala")}>Send</button>
+                    </div>
+                ) : (
+                    <span>Not connected!</span>
+                )
+            )}
+
+            {!loading && messages && (
+                <ul>
+                    {messages.map(m => <li>{m}</li>)}
+                </ul>
+            )}
         </span>
     );
 }
