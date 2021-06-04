@@ -14,12 +14,24 @@ import (
 var db *gorm.DB
 
 type User struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name" gorm:"not null;default:null"`
-	Email       string    `json:"email" gorm:"unique;not null;default:null"`
+	ID          int       `json:"id"`
+	Username    string    `json:"username" gorm:"unique;not null;default:null"`
 	ActivatedAt null.Time `json:"activated_at"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type Chat struct {
+	ID        int       `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type ChatUser struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	ChatID    int       `json:"chat_id"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func DB() *gorm.DB {
@@ -39,5 +51,5 @@ func DB() *gorm.DB {
 func Migrate(db *gorm.DB) {
 	// log.Println(db.Migrator().DropTable(&User{}))
 
-	db.AutoMigrate(&User{})
+	db.AutoMigrate(&User{}, &Chat{}, &ChatUser{})
 }

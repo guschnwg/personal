@@ -3,11 +3,11 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -148,8 +148,7 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(users) == 0 {
 		user := database.User{
-			Name:  "Gustavo Zanardini",
-			Email: "gustavo.zanardini@email.com",
+			Username: "gustavo",
 		}
 		db.Create(&user)
 		db.Find(&users)
@@ -178,8 +177,21 @@ func ToggleActivateUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type createUserBody struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Username string `json:"username"`
+}
+
+func LoginOrRegisterHandler(w http.ResponseWriter, r *http.Request) {
+	var body createUserBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := database.DB()
+	user := database.User{Username: body.Username}
+	tx := db.FirstOrCreate(&user, "username = ?", body.Username)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"results": user, "error": tx.Error})
 }
 
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -192,8 +204,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	db := database.DB()
 	user := database.User{
-		Name:  body.Name,
-		Email: body.Email,
+		Username: body.Username,
 	}
 	tx := db.Create(&user)
 
@@ -231,86 +242,126 @@ func BindProxy(r *mux.Router) {
 }
 
 type client struct {
-	ID int
-	c  *websocket.Conn
+	User database.User
+	c    *websocket.Conn
+}
+
+func (c *client) listenToMessage(handler *websocketHandler) {
+	for {
+		mt, message, err := c.c.ReadMessage()
+		if err != nil {
+			continue
+		}
+
+		re := regexp.MustCompile(`\[(.+)\] (.+)`)
+		subMatch := re.FindSubmatch(message)
+		if subMatch == nil {
+			handler.broadcastToAll(message)
+			continue
+		}
+
+		userID, _ := strconv.Atoi(string(subMatch[1]))
+		handler.sendToClient(userID, subMatch[2], mt)
+	}
+}
+
+type websocketHandler struct {
+	clients []*client
+}
+
+func (handler *websocketHandler) addClient(c *client) {
+	handler.clients = append(handler.clients, c)
+
+	// When disconnecting, remove me from the clients list
+	c.c.SetCloseHandler(func(code int, text string) error {
+		handler.removeClient(c)
+		handler.broadcastClientLeft(c)
+		return nil
+	})
+}
+
+func (handler *websocketHandler) removeClient(c *client) {
+	remainingClients := []*client{}
+	for _, client := range handler.clients {
+		if client.User.ID != c.User.ID {
+			remainingClients = append(remainingClients, client)
+		}
+	}
+	handler.clients = remainingClients
+}
+
+func (handler *websocketHandler) broadcastClientJoined(new *client) {
+	msg := []byte(fmt.Sprintf("[JOINED]: %v %v", new.User.ID, new.User.Username))
+	for _, client := range handler.clients {
+		if client.User.ID != new.User.ID {
+			client.c.WriteMessage(websocket.TextMessage, msg)
+		}
+	}
+}
+
+func (handler *websocketHandler) broadcastClientLeft(left *client) {
+	msg := []byte(fmt.Sprintf("LEFT: %v", left.User.ID))
+	for _, client := range handler.clients {
+		client.c.WriteMessage(websocket.TextMessage, msg)
+	}
+}
+
+func (handler *websocketHandler) broadcastEveryoneHere() {
+	everyoneIDs := []int{}
+	for _, client := range handler.clients {
+		everyoneIDs = append(everyoneIDs, client.User.ID)
+	}
+
+	for _, client := range handler.clients {
+		client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("HERE: %v", everyoneIDs)))
+	}
+}
+
+func (handler *websocketHandler) broadcastToAll(message []byte) {
+	for _, client := range handler.clients {
+		client.c.WriteMessage(websocket.TextMessage, message)
+	}
+}
+
+func (handler *websocketHandler) sendToClient(userID int, message []byte, mt int) {
+	for _, client := range handler.clients {
+		if client.User.ID == userID {
+			client.c.WriteMessage(mt, message)
+		}
+	}
 }
 
 func BindWebSocket(r *mux.Router) {
 	upgrader := websocket.Upgrader{}
-	idCount := 0
+	handler := &websocketHandler{[]*client{}}
 
-	clients := []client{}
+	r.HandleFunc("/websocket", func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.URL.Query().Get("user_id"))
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		c, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Print("upgrade:", err)
-			return
-		}
+		db := database.DB()
+		user := database.User{}
+		db.First(&user, "id = ?", id)
+
+		c, _ := upgrader.Upgrade(w, r, nil)
 		defer c.Close()
 
-		id := idCount
-		c.WriteMessage(websocket.TextMessage, []byte(strconv.Itoa(id)))
-		c.SetCloseHandler(func(code int, text string) error {
-			newClients := []client{}
-			for _, client := range clients {
-				if client.ID != id {
-					newClients = append(newClients, client)
-				}
-			}
-			clients = newClients
+		cli := &client{user, c}
 
-			for _, client := range clients {
-				client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("LEFT: %v", id)))
-			}
+		handler.addClient(cli)
+		handler.broadcastClientJoined(cli)
+		handler.broadcastEveryoneHere()
 
-			return nil
-		})
+		cli.listenToMessage(handler)
+	})
 
-		for _, client := range clients {
-			client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("JOINED: %v", id)))
-		}
-		clients = append(clients, client{id, c})
-
-		everyoneIDs := []int{}
-		for _, client := range clients {
-			everyoneIDs = append(everyoneIDs, client.ID)
-		}
-		for _, client := range clients {
-			client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("HERE: %v", everyoneIDs)))
-		}
-
-		idCount += 1
-
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				break
-			}
-
-			c.WriteMessage(mt, message)
-		}
-	}
-
-	externalHandler := func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/websocket/{id}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, _ := strconv.Atoi(vars["id"])
 
-		for _, c := range clients {
-			if c.ID == id {
-				c.c.WriteMessage(websocket.TextMessage, []byte("HELLOOOOO"))
-				w.WriteHeader(http.StatusOK)
-				fmt.Fprintf(w, "ID: %v\n", id)
-				return
-			}
-		}
+		handler.sendToClient(id, []byte("HELLO"), websocket.TextMessage)
 
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, ":(")
-	}
-
-	r.HandleFunc("/websocket", handler)
-	r.HandleFunc("/websocket/{id}", externalHandler)
+		json.NewEncoder(w).Encode(map[string]interface{}{"results": true})
+	})
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
