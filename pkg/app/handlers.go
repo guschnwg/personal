@@ -250,7 +250,7 @@ func (c *client) listenToMessage(handler *websocketHandler) {
 	for {
 		mt, message, err := c.c.ReadMessage()
 		if err != nil {
-			continue
+			break
 		}
 
 		re := regexp.MustCompile(`\[(.+)\] (.+)`)
