@@ -33,7 +33,7 @@ function Chat({ user }) {
     const [message, setMessage] = useState();
 
     useEffect(() => {
-        const client = new WebSocket('ws://localhost:8000/websocket?user_id=' + user.id);
+        const client = new WebSocket('ws://' + window.location.host + '/websocket?user_id=' + user.id);
 
         client.onopen = () => {
             setLoading(false);
