@@ -30,7 +30,7 @@ function Chat({ user }) {
     const [loading, setLoading] = useState(true);
     const [client, setClient] = useState();
     const [messages, setMessages] = useState([]);
-    const [message, setMessage] = useState();
+    const [message, setMessage] = useState("");
 
     useEffect(() => {
         const client = new WebSocket('ws://' + window.location.host + '/websocket?user_id=' + user.id);
@@ -38,19 +38,15 @@ function Chat({ user }) {
         client.onopen = () => {
             setLoading(false);
             setConnected(true);
-
-            client.send(JSON.stringify(user))
         };
 
         client.onmessage = (message) => {
-            setMessages(prev => [...prev, message.data]);
+            setMessages(prev => [...prev, JSON.parse(message.data)]);
         };
 
         client.onerror = (err) => {
             setLoading(false);
             setConnected(false);
-
-            console.error(err);
         }
 
         setClient(client);
@@ -69,10 +65,14 @@ function Chat({ user }) {
                     <div>
                         <span>Connected!</span>
                         <input value={message} onInput={event => setMessage(event.target.value)} />
-                        <button onClick={() => {
-                            client.send(message)
-                            setMessage("")
-                        }}>Send</button>
+                        <button
+                            onClick={() => {
+                                client.send(message)
+                                setMessage("")
+                            }}
+                        >
+                            Send
+                        </button>
                     </div>
                 ) : (
                     <span>Not connected!</span>
@@ -81,7 +81,7 @@ function Chat({ user }) {
 
             {!loading && messages && (
                 <ul>
-                    {messages.map(m => <li>{m}</li>)}
+                    {messages.map(m => <li>{m.from && m.from.username ? `{${m.from.username}}` : "{SYSTEM}"}: {m.content}</li>)}
                 </ul>
             )}
         </span>

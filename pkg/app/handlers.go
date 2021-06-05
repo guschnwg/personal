@@ -256,17 +256,25 @@ func (c *client) listenToMessage(handler *websocketHandler) {
 		re := regexp.MustCompile(`\[(.+)\] (.+)`)
 		subMatch := re.FindSubmatch(message)
 		if subMatch == nil {
-			handler.broadcastToAll(message)
+			handler.broadcast(c, string(message))
 			continue
 		}
 
 		userID, _ := strconv.Atoi(string(subMatch[1]))
-		handler.sendToClient(userID, subMatch[2], mt)
+		handler.sendToUser(c, userID, string(subMatch[0]), mt)
+		if c.User.ID != userID {
+			handler.sendToUser(c, c.User.ID, string(subMatch[0]), mt)
+		}
 	}
 }
 
 type websocketHandler struct {
 	clients []*client
+}
+
+type websocketMessage struct {
+	From    database.User `json:"from"`
+	Content interface{}   `json:"content"`
 }
 
 func (handler *websocketHandler) addClient(c *client) {
@@ -283,7 +291,7 @@ func (handler *websocketHandler) addClient(c *client) {
 func (handler *websocketHandler) removeClient(c *client) {
 	remainingClients := []*client{}
 	for _, client := range handler.clients {
-		if client.User.ID != c.User.ID {
+		if client != c {
 			remainingClients = append(remainingClients, client)
 		}
 	}
@@ -291,19 +299,11 @@ func (handler *websocketHandler) removeClient(c *client) {
 }
 
 func (handler *websocketHandler) broadcastClientJoined(new *client) {
-	msg := []byte(fmt.Sprintf("[JOINED]: %v %v", new.User.ID, new.User.Username))
-	for _, client := range handler.clients {
-		if client.User.ID != new.User.ID {
-			client.c.WriteMessage(websocket.TextMessage, msg)
-		}
-	}
+	handler.broadcast(nil, fmt.Sprintf("[JOINED]: %v %v", new.User.ID, new.User.Username))
 }
 
 func (handler *websocketHandler) broadcastClientLeft(left *client) {
-	msg := []byte(fmt.Sprintf("LEFT: %v", left.User.ID))
-	for _, client := range handler.clients {
-		client.c.WriteMessage(websocket.TextMessage, msg)
-	}
+	handler.broadcast(nil, fmt.Sprintf("[LEFT]: %v", left.User.ID))
 }
 
 func (handler *websocketHandler) broadcastEveryoneHere() {
@@ -312,21 +312,39 @@ func (handler *websocketHandler) broadcastEveryoneHere() {
 		everyoneIDs = append(everyoneIDs, client.User.ID)
 	}
 
+	handler.broadcast(nil, fmt.Sprintf("[HERE]: %v", everyoneIDs))
+}
+
+func (handler *websocketHandler) broadcast(from *client, msg string) {
+	user := database.User{}
+	if from != nil {
+		user = from.User
+	}
+
+	data, _ := json.Marshal(websocketMessage{
+		user,
+		msg,
+	})
+
 	for _, client := range handler.clients {
-		client.c.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("HERE: %v", everyoneIDs)))
+		client.c.WriteMessage(websocket.TextMessage, data)
 	}
 }
 
-func (handler *websocketHandler) broadcastToAll(message []byte) {
-	for _, client := range handler.clients {
-		client.c.WriteMessage(websocket.TextMessage, message)
+func (handler *websocketHandler) sendToUser(from *client, userID int, msg string, mt int) {
+	user := database.User{}
+	if from != nil {
+		user = from.User
 	}
-}
 
-func (handler *websocketHandler) sendToClient(userID int, message []byte, mt int) {
+	data, _ := json.Marshal(websocketMessage{
+		user,
+		msg,
+	})
+
 	for _, client := range handler.clients {
 		if client.User.ID == userID {
-			client.c.WriteMessage(mt, message)
+			client.c.WriteMessage(mt, data)
 		}
 	}
 }
@@ -358,7 +376,7 @@ func BindWebSocket(r *mux.Router) {
 		vars := mux.Vars(r)
 		id, _ := strconv.Atoi(vars["id"])
 
-		handler.sendToClient(id, []byte("HELLO"), websocket.TextMessage)
+		handler.sendToUser(nil, id, "HELLO", websocket.TextMessage)
 
 		json.NewEncoder(w).Encode(map[string]interface{}{"results": true})
 	})
