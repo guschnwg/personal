@@ -1,3 +1,5 @@
+import { h } from 'preact';
+
 function Audio() {
     return (
         <span>

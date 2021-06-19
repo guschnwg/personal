@@ -1,3 +1,4 @@
+import { h } from 'preact';
 import { useEffect, useState, useRef } from 'preact/hooks';
 
 window.USE_PROXY = true;

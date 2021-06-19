@@ -1,3 +1,4 @@
+import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks'
 
 function makeid(length) {

@@ -21,6 +21,7 @@ services:
             - front_build:/app/web/front/build
         ports:
             - "8080:8080"
+            - "37735:37735"
 volumes:
     node_modules:
     front_build:
