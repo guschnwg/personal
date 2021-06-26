@@ -2,7 +2,6 @@ import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks'
 import * as PIXI from "pixi.js"
 import Keyboard from "pixi.js-keyboard"
-import eightBit from "8bit"
 
 const CAT_TEXTURE = PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-1.png");
 const BOT_TEXTURE = CAT_TEXTURE.clone();
