@@ -2,6 +2,8 @@ import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks'
 import * as PIXI from "pixi.js"
 import Keyboard from "pixi.js-keyboard"
+import UserGuard from './user-guard';
+import useSocket, { useVideoSyncerSocket } from './socket';
 
 const CAT_TEXTURE = PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-1.png");
 const BOT_TEXTURE = CAT_TEXTURE.clone();
@@ -39,13 +41,17 @@ const POSITIONS = {
   }
 }
 
-function Game() {
+function Pixi({ user }) {
   const ref = useRef()
   const videoRef = useRef()
   const [app, setApp] = useState()
+  const { socket } = useSocket(user)
+  const bindVideo = useVideoSyncerSocket(socket, user);
 
   useEffect(() => {
     if (ref && ref.current && videoRef && videoRef.current) {
+      bindVideo(videoRef.current);
+
       const app = new PIXI.Application({
         width: 500,
         height: 500,
@@ -189,6 +195,14 @@ function Game() {
         />
       </video>
     </div>
+  )
+}
+
+function Game() {
+  return (
+    <UserGuard>
+      {user => <Pixi user={user} />}
+    </UserGuard>
   )
 }
 
