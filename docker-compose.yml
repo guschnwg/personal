@@ -7,7 +7,7 @@ services:
             - PORT=${PORT}
             - DATABASE_URL=${DATABASE_URL}
         ports:
-            - "8000:8000"
+            - 8000:8000
         volumes:
             - .:/app
             - front_build:/app/web/front/build
@@ -20,8 +20,19 @@ services:
             - node_modules:/app/web/front/node_modules
             - front_build:/app/web/front/build
         ports:
-            - "8080:8080"
-            - "37735:37735"
+            - 8080:8080
+            - 37735:37735
+    database:
+        image: "postgres"
+        environment:
+            - POSTGRES_USER=unicorn_user
+            - POSTGRES_PASSWORD=magical_password
+            - POSTGRES_DB=rainbow_database
+        volumes:
+            - app_database_data:/var/lib/postgresql/app_database_data/
+        ports:
+            - 5432:5432
 volumes:
     node_modules:
     front_build:
+    app_database_data: 
