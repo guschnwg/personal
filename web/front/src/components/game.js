@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import * as PIXI from "pixi.js"
 import Keyboard from "pixi.js-keyboard"
 import UserGuard from './user-guard';
-import useSocket, { useVideoSyncerSocket } from './socket';
+import useSocket, { useVideoSyncerSocket, usePlayerSyncerSocket, useAppSyncerSocket } from './socket';
 
 const CAT_TEXTURE = PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-1.png");
 const BOT_TEXTURE = CAT_TEXTURE.clone();
@@ -45,11 +45,13 @@ function Pixi({ user }) {
   const ref = useRef()
   const videoRef = useRef()
   const [app, setApp] = useState()
-  const { socket } = useSocket(user)
-  const bindVideo = useVideoSyncerSocket(socket, user);
+  const { socket, connected } = useSocket(user)
+  const { bindVideo } = useVideoSyncerSocket(socket, user);
+  const { bindPlayer, emitPlayer } = usePlayerSyncerSocket(socket, user);
+  const { bindApp } = useAppSyncerSocket(socket, user);
 
   useEffect(() => {
-    if (ref && ref.current && videoRef && videoRef.current) {
+    if (ref && ref.current && videoRef && videoRef.current && bindPlayer && bindVideo && !app && connected) {
       bindVideo(videoRef.current);
 
       const app = new PIXI.Application({
@@ -76,10 +78,12 @@ function Pixi({ user }) {
         if (cat.movementStack.length > 0) {
           cat.movements[cat.movementStack[cat.movementStack.length - 1]]();
           cat.texture.frame = cat.frameGroup.walk[Math.floor(Date.now() / 250) % 2];
+          emitPlayer(cat);
         } else {
           cat.texture.frame = cat.frameGroup.stand;
         }
       }
+      bindPlayer(cat);
 
       const bot = new PIXI.Sprite(BOT_TEXTURE);
       bot.frameGroup = POSITIONS.down;
@@ -176,8 +180,9 @@ function Pixi({ user }) {
       });
 
       setApp(app);
+      bindApp(app);
     }
-  }, [ref, videoRef])
+  }, [ref, videoRef, bindVideo, bindPlayer, connected])
 
   return (
     <div>
