@@ -26,10 +26,10 @@ docker-run:
 		go-app
 
 # If you run into issues with file watchers, disable use gRPC... in docker preferences
-docker-dev:
+docker-dev-heroku:
 	PORT=$(PORT) DATABASE_URL=$(shell heroku config:get DATABASE_URL -a guznrdni-personal) \
 		docker compose up back front
 
-docker-dev-local:
+docker-dev:
 	PORT=$(PORT) DATABASE_URL=postgresql://unicorn_user:magical_password@host.docker.internal:5432/rainbow_database \
 		docker compose up back front database
