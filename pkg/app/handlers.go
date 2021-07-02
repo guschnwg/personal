@@ -7,6 +7,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -248,6 +249,7 @@ func (c *client) listenToMessage(handler *websocketHandler) {
 	for {
 		mt, message, err := c.c.ReadMessage()
 		if err != nil {
+			c.c.Close()
 			break
 		}
 
@@ -268,6 +270,7 @@ func (c *client) listenToMessage(handler *websocketHandler) {
 
 type websocketHandler struct {
 	clients []*client
+	mu      sync.Mutex
 }
 
 type websocketMessage struct {
@@ -329,13 +332,8 @@ func (handler *websocketHandler) broadcast(from *client, msg websocketMessage) {
 		user = from.User
 	}
 
-	data, _ := json.Marshal(websocketMessageToSend{
-		user,
-		msg,
-	})
-
 	for _, client := range handler.clients {
-		client.c.WriteMessage(websocket.TextMessage, data)
+		handler.send(client, websocketMessageToSend{user, msg})
 	}
 }
 
@@ -345,21 +343,23 @@ func (handler *websocketHandler) sendToUser(from *client, userID int, msg websoc
 		user = from.User
 	}
 
-	data, _ := json.Marshal(websocketMessageToSend{
-		user,
-		msg,
-	})
-
 	for _, client := range handler.clients {
 		if client.User.ID == userID {
-			client.c.WriteMessage(mt, data)
+			handler.send(client, websocketMessageToSend{user, msg})
 		}
 	}
 }
 
+func (handler *websocketHandler) send(client *client, msg websocketMessageToSend) {
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+
+	client.c.WriteJSON(msg)
+}
+
 func BindWebSocket(r *mux.Router) {
 	upgrader := websocket.Upgrader{}
-	handler := &websocketHandler{[]*client{}}
+	handler := &websocketHandler{clients: []*client{}}
 
 	r.HandleFunc("/websocket", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.URL.Query().Get("user_id"))
@@ -367,6 +367,9 @@ func BindWebSocket(r *mux.Router) {
 		db := database.DB()
 		user := database.User{}
 		db.First(&user, "id = ?", id)
+		if sqlDB, err := db.DB(); err == nil {
+			sqlDB.Close()
+		}
 
 		c, _ := upgrader.Upgrade(w, r, nil)
 		defer c.Close()

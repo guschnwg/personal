@@ -1,3 +1,4 @@
+import EventEmitter from 'events';
 import { useEffect, useState } from 'preact/hooks'
 
 function newSocket(userId) {
@@ -13,7 +14,13 @@ function useSocket(user) {
 
   useEffect(() => {
     if (socket) {
+      const sendWhenConnected = [];
+
       socket.onopen = () => {
+        sendWhenConnected.forEach(d => {
+          console.log("Sending enqueued...")
+          socket._send(d);
+        });
         setLoading(false);
         setConnected(true);
       };
@@ -27,6 +34,15 @@ function useSocket(user) {
       socket.close = () => {
         socket.dispatchEvent(new Event("shutdown"));
         socket._close();
+      }
+
+      socket._send = socket.send;
+      socket.send = (data) => {
+        if (socket.readyState === socket.CONNECTING) {
+          sendWhenConnected.push(data)
+        } else if (socket.readyState === socket.OPEN) {
+          socket._send(data);
+        }
       }
 
       window.addEventListener("beforeunload", () => {
@@ -122,6 +138,7 @@ export function usePlayerSyncerSocket(socket, user) {
             y: player.y,
             frameGroup: player.frameGroup,
             texture: player.texture.textureCacheIds,
+            textureFrame: player.texture.frame,
           } : null,
         }
       })
@@ -136,7 +153,7 @@ export function usePlayerSyncerSocket(socket, user) {
 
   const bindPlayer = (player) => {
     setPlayer(player);
-    _emit("joined", player);
+    _emit("join", player);
   };
   const emitPlayer = (player) => {
     _emit("move", player);
@@ -145,30 +162,28 @@ export function usePlayerSyncerSocket(socket, user) {
   return { bindPlayer, emitPlayer };
 }
 
-export function useAppSyncerSocket(socket, user) {
-  const [app, setApp] = useState();
+export function useOtherPlayersSyncerSocket(socket, user) {
+  const [emitter] = useState(new EventEmitter());
 
   useEffect(() => {
-    if (socket && app && user) {
+    if (socket && user) {
       socket.addEventListener("message", message => {
         const msg = JSON.parse(message.data);
 
         if (msg.type === "game" && msg.from && msg.from.id !== user.id) {
-          if (msg.data.action === "move") {
-            console.log("Player moved");
-          } else if (msg.data.action === "joined") {
-            console.log("Player joined");
+          if (msg.data.action === "join") {
+            emitter.emit("join", msg);
+          } else if (msg.data.action === "move") {
+            emitter.emit("move", msg);
           } else if (msg.data.action === "left") {
-            console.log("Player left");
+            emitter.emit("left", msg);
           }
         }
       });
     }
-  }, [socket, app, user])
+  }, [socket, user])
 
-  const bindApp = (app) => setApp(app);
-
-  return { bindApp };
+  return { otherPlayers: emitter };
 }
 
 export default useSocket
