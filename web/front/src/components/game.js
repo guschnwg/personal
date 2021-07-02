@@ -171,13 +171,13 @@ class Video {
   constructor(videoEl, x = 20, y = 300) {
     this.videoEl = videoEl;
 
-    this.sprite.x = x;
-    this.sprite.y = y;
-
     this.canvas = document.createElement("canvas");
     this.img = document.createElement("img");
     this.imageResource = new PIXI.ImageResource(this.img);
     this.sprite = PIXI.Sprite.from(this.imageResource);
+
+    this.sprite.x = x;
+    this.sprite.y = y;
 
     this.latestRun = 0;
 
