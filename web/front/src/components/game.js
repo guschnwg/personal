@@ -53,32 +53,34 @@ class Sprite extends PIXI.Sprite {
 }
 
 class Player extends Sprite {
-  movements = {
-    ArrowLeft: () => {
-      this.x -= 1;
-      this.frameGroup = POSITIONS.left;
-    },
-    ArrowRight: () => {
-      this.x += 1;
-      this.frameGroup = POSITIONS.right;
-    },
-    ArrowUp: () => {
-      this.y -= 1;
-      this.frameGroup = POSITIONS.up;
-    },
-    ArrowDown: () => {
-      this.y += 1;
-      this.frameGroup = POSITIONS.down;
-    },
-  };
-  possibleMovements = Object.keys(this.movements);
-  movementStack = [];
-  frameGroup = POSITIONS.down;
-  events = new EventEmitter();
-
   constructor(id, texture) {
     super(texture);
+
     this.id = id;
+
+    this.movements = {
+      ArrowLeft: () => {
+        this.x -= 1;
+        this.frameGroup = POSITIONS.left;
+      },
+      ArrowRight: () => {
+        this.x += 1;
+        this.frameGroup = POSITIONS.right;
+      },
+      ArrowUp: () => {
+        this.y -= 1;
+        this.frameGroup = POSITIONS.up;
+      },
+      ArrowDown: () => {
+        this.y += 1;
+        this.frameGroup = POSITIONS.down;
+      },
+    };
+    this.possibleMovements = Object.keys(this.movements);
+    this.movementStack = [];
+    this.frameGroup = POSITIONS.down;
+    this.events = new EventEmitter();
+
     this.texture.frame = this.frameGroup.stand;
   }
 
@@ -122,12 +124,16 @@ class OtherPlayer extends Sprite {
 }
 
 class Bot extends Sprite {
-  frameGroup = POSITIONS.down;
+  constructor(texture) {
+    super(texture);
 
-  vx = 0;
-  vy = 0;
+    this.frameGroup = POSITIONS.down;
 
-  lastNumber = 0;
+    this.vx = 0;
+    this.vy = 0;
+
+    this.lastNumber = 0;
+  }
 
   gameLoop(delta) {
     const number = Math.floor(Date.now() / 1000);
@@ -162,18 +168,18 @@ class Bot extends Sprite {
 }
 
 class Video {
-  canvas = document.createElement("canvas");
-  img = document.createElement("img");
-  imageResource = new PIXI.ImageResource(this.img);
-  sprite = PIXI.Sprite.from(this.imageResource);
-
-  latestRun = 0;
-
   constructor(videoEl, x = 20, y = 300) {
     this.videoEl = videoEl;
 
     this.sprite.x = x;
     this.sprite.y = y;
+
+    this.canvas = document.createElement("canvas");
+    this.img = document.createElement("img");
+    this.imageResource = new PIXI.ImageResource(this.img);
+    this.sprite = PIXI.Sprite.from(this.imageResource);
+
+    this.latestRun = 0;
 
     this.sprite.gameLoop = this.gameLoop.bind(this);
   }
@@ -210,11 +216,11 @@ class Video {
 }
 
 class MyGame {
-  all = [];
-  player = undefined;
-
   constructor(view) {
     this.app = new PIXI.Application({ width: 500, height: 500, view });
+
+    this.all = [];
+    this.player = undefined;
 
     this.app.ticker.add(delta => {
       if (this.player) {
