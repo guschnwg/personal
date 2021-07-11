@@ -1,5 +1,10 @@
 PORT=8000
 
+push-env:
+	@while read key_value; do \
+		heroku config:set $$key_value -a guznrdni-personal; \
+	done < .env
+
 build:
 	GO111MODULE=on go build -o ./main cmd/app/main.go
 run:
