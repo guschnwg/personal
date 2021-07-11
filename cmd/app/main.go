@@ -28,6 +28,9 @@ func main() {
 	r.HandleFunc("/api/users/create", app.CreateUserHandler).Methods("POST")
 	r.HandleFunc("/api/users/login_or_register", app.LoginOrRegisterHandler).Methods("POST")
 
+	r.HandleFunc("/api/twilio/sms", app.SendTwilioSms)
+	r.HandleFunc("/api/twilio/call", app.SendTwilioCall)
+
 	r.PathPrefix("/api").HandlerFunc(http.NotFound)
 
 	app.BindProxy(r)

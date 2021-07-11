@@ -2,10 +2,12 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -15,6 +17,8 @@ import (
 	"github.com/guschnwg/personal/pkg/crawlers"
 	"github.com/guschnwg/personal/pkg/database"
 	"github.com/patrickmn/go-cache"
+	twilio "github.com/twilio/twilio-go"
+	openapi "github.com/twilio/twilio-go/rest/api/v2010"
 	"gopkg.in/guregu/null.v4"
 )
 
@@ -208,6 +212,39 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	tx := db.Create(&user)
 
 	json.NewEncoder(w).Encode(map[string]interface{}{"results": user, "error": tx.Error})
+}
+
+func SendTwilioSms(w http.ResponseWriter, r *http.Request) {
+	client := twilio.NewRestClient(os.Getenv("TWILIO_ACCOUNT_SID"), os.Getenv("TWILIO_AUTH_TOKEN"))
+
+	params := &openapi.CreateMessageParams{}
+	params.SetTo(os.Getenv("TO_PHONE_NUMBER"))
+	params.SetFrom(os.Getenv("TWILIO_PHONE_NUMBER"))
+	params.SetBody("Hello from Golang!")
+
+	_, err := client.ApiV2010.CreateMessage(params)
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("SMS sent successfully!")
+	}
+}
+
+func SendTwilioCall(w http.ResponseWriter, r *http.Request) {
+	client := twilio.NewRestClient(os.Getenv("TWILIO_ACCOUNT_SID"), os.Getenv("TWILIO_AUTH_TOKEN"))
+
+	params := &openapi.CreateCallParams{}
+	params.SetTo(os.Getenv("TO_PHONE_NUMBER"))
+	params.SetFrom(os.Getenv("TWILIO_PHONE_NUMBER"))
+	params.SetUrl("https://demo.twilio.com/docs/voice.xml")
+	params.SetStatusCallbackEvent([]string{"initiated", "answered"})
+
+	_, err := client.ApiV2010.CreateCall(params)
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("SMS sent successfully!")
+	}
 }
 
 func BindProxy(r *mux.Router) {

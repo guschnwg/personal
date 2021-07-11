@@ -6,3 +6,4 @@ main
 .DS_store
 node_modules
 size-plugin.json
+.env

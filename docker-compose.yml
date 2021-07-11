@@ -3,6 +3,8 @@ services:
         build:
             context: .
             dockerfile: Dockerfile.back
+        env_file:
+            - .env
         environment:
             - PORT=${PORT}
             - DATABASE_URL=${DATABASE_URL}
