@@ -48,6 +48,8 @@ func SpotifyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("id")
+
 	artist := r.URL.Query().Get("artist")
 	if artist == "" {
 		artist = "Oliver Schories"
@@ -57,7 +59,10 @@ func YoutubeHandler(w http.ResponseWriter, r *http.Request) {
 	if title == "" {
 		title = "One More Dance, Jules"
 	}
-	query := url.QueryEscape(artist + " - " + title)
+
+	if query == "" {
+		query = url.QueryEscape(artist + " - " + title)
+	}
 
 	useCache := r.URL.Query().Get("no_cache") == ""
 	cacheKey := "youtube - " + query

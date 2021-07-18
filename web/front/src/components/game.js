@@ -352,6 +352,8 @@ class MyGame {
 function Pixi({ user }) {
   const ref = useRef();
   const videoRef = useRef();
+  const [youtubeURL, setYoutubeURL] = useState("https://www.youtube.com/watch?v=pyGKsys_q4U");
+  const [videoURL, setVideoURL] = useState("front/assets/videos/mov_bbb.mp4");
 
   const [game, setGame] = useState();
 
@@ -384,18 +386,44 @@ function Pixi({ user }) {
     }
   }, [game, ref.current, videoRef.current]);
 
+  const fetchVideoURL = () => {
+    const id = youtubeURL.replace("https://www.youtube.com/watch?v=", "");
+  
+    fetch("api/youtube?id=" + id).then(res => res.json()).then(data => {
+      if (data && data.results && data.results.formats) {
+        const url = new URL(data.results.formats[data.results.formats.length - 1].url);
+
+        if (window.USE_PROXY) {
+            url.search += "&host=" + url.host;
+            url.host = window.location.host;
+            url.protocol = window.location.protocol;
+        }
+
+        setVideoURL(url);
+        setTimeout(() => videoRef.current.load(), 100);
+      }
+    })
+  }
+
   return (
     <div>
       <div class="canvas-container">
         <canvas ref={ref} />
       </div>
 
+      <div>
+        <input value={youtubeURL} onInput={e => setYoutubeURL(e.target.value)} />
+        <button onClick={fetchVideoURL}></button>
+      </div>
+
       <video
         ref={videoRef}
+        height={240}
+        width={320}
         controls
       >
         <source
-          src="front/assets/videos/mov_bbb.mp4"
+          src={videoURL}
           type="video/mp4"
         />
       </video>
