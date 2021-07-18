@@ -182,3 +182,28 @@ button.small {
 	font-size: 56px;
 	margin: 0 10px;
 }
+
+.canvas-container {
+	position: relative;
+	display: inline-block;
+}
+.canvas-container:before {
+	position: absolute;
+	content: '';
+	height: 100%;
+	width: 3px;
+	left: 50%;
+	top: 0;
+	background-color: red;
+	z-index: 1000;
+}
+.canvas-container:after {
+	position: absolute;
+	content: '';
+	height: 3px;
+	width: 100%;
+	left: 0;
+	top: 50%;
+	background-color: red;
+	z-index: 1000;
+}

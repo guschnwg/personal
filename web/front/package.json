@@ -23,7 +23,13 @@
     "parcel-plugin-static-files-copy": "^2.6.0"
   },
   "dependencies": {
+    "@pixi/display": "^6.0.4",
+    "@pixi/interaction": "^6.0.4",
+    "@pixi/math": "^6.0.4",
+    "@pixi/ticker": "^6.0.4",
     "events": "^3.3.0",
+    "glfx": "0.0.4",
+    "pixi-viewport": "^4.31.0",
     "pixi.js": "^6.0.4",
     "pixi.js-keyboard": "^1.1.6",
     "preact": "^10.3.2",

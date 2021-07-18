@@ -1,6 +1,8 @@
 import { h } from 'preact';
+import fx from 'glfx';
 import { useEffect, useRef, useState } from 'preact/hooks'
 import * as PIXI from "pixi.js"
+import { Viewport } from 'pixi-viewport'
 import Keyboard from "pixi.js-keyboard"
 import EventEmitter from 'events';
 import UserGuard from './user-guard';
@@ -60,19 +62,19 @@ class Player extends Sprite {
 
     this.movements = {
       ArrowLeft: () => {
-        this.x -= 1;
+        this.position.x -= 1;
         this.frameGroup = POSITIONS.left;
       },
       ArrowRight: () => {
-        this.x += 1;
+        this.position.x += 1;
         this.frameGroup = POSITIONS.right;
       },
       ArrowUp: () => {
-        this.y -= 1;
+        this.position.y -= 1;
         this.frameGroup = POSITIONS.up;
       },
       ArrowDown: () => {
-        this.y += 1;
+        this.position.y += 1;
         this.frameGroup = POSITIONS.down;
       },
     };
@@ -82,6 +84,11 @@ class Player extends Sprite {
     this.events = new EventEmitter();
 
     this.texture.frame = this.frameGroup.stand;
+
+    this.pivot.set(this.width / 2, this.height / 2);
+
+    this.zIndex = 99999999;
+    window.player = this;
   }
 
   gameLoop(delta) {
@@ -168,16 +175,18 @@ class Bot extends Sprite {
 }
 
 class Video {
-  constructor(videoEl, x = 20, y = 300) {
+  constructor(videoEl, x = 0, y = 0) {
     this.videoEl = videoEl;
 
-    this.canvas = document.createElement("canvas");
+    this.canvas = fx.canvas();
     this.img = document.createElement("img");
     this.imageResource = new PIXI.ImageResource(this.img);
     this.sprite = PIXI.Sprite.from(this.imageResource);
 
-    this.sprite.x = x;
-    this.sprite.y = y;
+    window.canvas = this.canvas;
+
+    this.sprite.position.x = x;
+    this.sprite.position.y = y;
 
     this.latestRun = 0;
 
@@ -194,21 +203,27 @@ class Video {
         this.canvas.width = this.videoEl.videoWidth;
         this.canvas.height = this.videoEl.videoHeight;
 
-        const canvasCtx = this.canvas.getContext('2d');
-        canvasCtx.mozImageSmoothingEnabled = false;
-        canvasCtx.webkitImageSmoothingEnabled = false;
-        canvasCtx.imageSmoothingEnabled = false;
+        // const canvasCtx = this.canvas.getContext('2d');
+        // canvasCtx.mozImageSmoothingEnabled = false;
+        // canvasCtx.webkitImageSmoothingEnabled = false;
+        // canvasCtx.imageSmoothingEnabled = false;
 
-        canvasCtx.drawImage(
-          this.videoEl, 0, 0, this.canvas.width * .2, this.canvas.height * .2
-        );
-        canvasCtx.drawImage(
-          this.canvas,
-          0, 0, this.canvas.width * .2, this.canvas.height * .2,
-          0, 0, this.canvas.width, this.canvas.height
-        );
+        // canvasCtx.drawImage(
+        //   this.videoEl, 0, 0, this.canvas.width * .2, this.canvas.height * .2
+        // );
+        // canvasCtx.drawImage(
+        //   this.canvas,
+        //   0, 0, this.canvas.width * .2, this.canvas.height * .2,
+        //   0, 0, this.canvas.width, this.canvas.height
+        // );
 
-        this.img.src = this.canvas.toDataURL();
+        const texture = this.canvas.texture(this.videoEl);
+        this.canvas.draw(texture).perspective(
+          [0, 0, 0, this.videoEl.videoHeight, this.videoEl.videoWidth, this.videoEl.videoHeight, this.videoEl.videoWidth, 0],
+          [0, 0, 50, this.videoEl.videoHeight - 50, this.videoEl.videoWidth - 50, this.videoEl.videoHeight - 50, this.videoEl.videoWidth, 0]
+        ).update();
+
+        this.img.src = canvas.toDataURL();
         this.imageResource.update();
       }
     }
@@ -217,7 +232,29 @@ class Video {
 
 class MyGame {
   constructor(view) {
-    this.app = new PIXI.Application({ width: 500, height: 500, view });
+    this.app = new PIXI.Application({ height: 500, width: 500, view });
+    window.app = this.app;
+
+    this.viewport = new Viewport({
+      screenWidth: this.app.screen.width,
+      screenHeight: this.app.screen.height,
+
+      worldWidth: 1000,
+      worldHeight: 1000,
+
+      interaction: this.app.renderer.plugins.interaction
+    });
+    this.viewport.fit();
+    this.viewport.scaled = 1;
+    this.viewport.pivot.set(
+      this.viewport.screenWidth / 2 * -1,
+      this.viewport.screenHeight / 2 * -1
+    );
+    this.viewport.sortableChildren = true;
+
+    window.viewport = this.viewport;
+
+    this.app.stage.addChild(this.viewport);
 
     this.all = [];
     this.player = undefined;
@@ -225,6 +262,10 @@ class MyGame {
     this.app.ticker.add(delta => {
       if (this.player) {
         this.player.gameLoop(delta);
+        this.viewport.moveCenter(
+          this.player.position.x + this.viewport.worldWidth / 4,
+          this.player.position.y + this.viewport.worldHeight / 4,
+        );
       }
 
       this.all.forEach(c => c.gameLoop(delta));
@@ -234,11 +275,11 @@ class MyGame {
   }
 
   addCharacter(char) {
-    this.app.stage.addChild(char);
+    this.viewport.addChild(char);
     this.all.push(char);
   }
   removeCharacter(char) {
-    this.app.stage.removeChild(char);
+    this.viewport.removeChild(char);
     this.all = this.all.filter(c => c !== char);
   }
 
@@ -246,7 +287,7 @@ class MyGame {
     const player = new Player(id, CAT_TEXTURE);
 
     this.player = player;
-    this.app.stage.addChild(this.player);
+    this.viewport.addChild(this.player);
 
     return player;
   }
@@ -284,8 +325,8 @@ class MyGame {
 
     bot.isBot = true;
     bot.id = id;
-    bot.x = x;
-    bot.y = y;
+    bot.position.x = x;
+    bot.position.y = y;
 
     this.addCharacter(bot);
 
@@ -302,7 +343,7 @@ class MyGame {
   }
 
   addVideo(videoEl) {
-    const video = new Video(videoEl, 100, 100);
+    const video = new Video(videoEl, 0, 0);
 
     this.addCharacter(video.sprite);
   }
@@ -335,13 +376,19 @@ function Pixi({ user }) {
       const video = game.addVideo(videoRef.current);
       bindVideo(videoRef.current);
 
+      for (let i = 0; i < 100; i++) {
+        game.addBot();
+      }
+
       setGame(game);
     }
   }, [game, ref.current, videoRef.current]);
 
   return (
     <div>
-      <canvas ref={ref} />
+      <div class="canvas-container">
+        <canvas ref={ref} />
+      </div>
 
       <video
         ref={videoRef}

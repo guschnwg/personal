@@ -126,21 +126,25 @@ export function usePlayerSyncerSocket(socket, user) {
   const [player, setPlayer] = useState();
 
   const _emit = (action, player) => {
-    console.log("Emitting... " + action)
+    const data = {
+      action,
+      player: player ? {
+        movementStack: player.movementStack,
+        position: {x: player.position.x, y: player.position.y},
+        pivot: {x: player.pivot.x, y: player.pivot.y},
+        anchor: {x: player.anchor.x, y: player.anchor.y},
+        y: player.y,
+        x: player.x,
+        frameGroup: player.frameGroup,
+        texture: player.texture.textureCacheIds,
+        textureFrame: player.texture.frame,
+      } : null,
+    };
+    console.log("Emitting... " + action, data)
     socket.send(
       JSON.stringify({
         type: "game",
-        data: {
-          action,
-          player: player ? {
-            movementStack: player.movementStack,
-            x: player.x,
-            y: player.y,
-            frameGroup: player.frameGroup,
-            texture: player.texture.textureCacheIds,
-            textureFrame: player.texture.frame,
-          } : null,
-        }
+        data
       })
     );
   }
