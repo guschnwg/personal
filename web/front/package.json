@@ -29,6 +29,7 @@
     "@pixi/ticker": "^6.0.4",
     "events": "^3.3.0",
     "glfx": "0.0.4",
+    "perspectivejs": "^1.0.2",
     "pixi-viewport": "^4.31.0",
     "pixi.js": "^6.0.4",
     "pixi.js-keyboard": "^1.1.6",

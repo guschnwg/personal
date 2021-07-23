@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 
 function newSocket(userId) {
   const protocol = window.location.protocol.replace('http', 'ws');
@@ -18,7 +18,6 @@ function useSocket(user) {
 
       socket.onopen = () => {
         sendWhenConnected.forEach(d => {
-          console.log("Sending enqueued...")
           socket._send(d);
         });
         setLoading(false);
@@ -62,6 +61,7 @@ function useSocket(user) {
 
 export function useVideoSyncerSocket(socket, user) {
   const [video, setVideo] = useState()
+  const [emitter] = useState(new EventEmitter());
 
   useEffect(() => {
     if (socket && video && user) {
@@ -77,6 +77,8 @@ export function useVideoSyncerSocket(socket, user) {
             video.externalEvent = true
             video.currentTime = msg.data.currentTime
             video.pause()
+          } else if (msg.data.action === "change") {
+            emitter.emit("change", msg.data.url)
           }
         }
       });
@@ -118,13 +120,24 @@ export function useVideoSyncerSocket(socket, user) {
   }, [socket, video, user])
 
   const bindVideo = (video) => setVideo(video);
+  const changeVideo = (newVideoURL) => {
+    if (socket) {
+      socket.send(
+        JSON.stringify({
+          type: "video",
+          data: {
+            action: "change",
+            url: newVideoURL
+          }
+        })
+      )
+    }
+  }
 
-  return { bindVideo };
+  return { bindVideo, changeVideo, videoEmitter: emitter };
 }
 
 export function usePlayerSyncerSocket(socket, user) {
-  const [player, setPlayer] = useState();
-
   const _emit = (action, player) => {
     const data = {
       action,
@@ -140,7 +153,6 @@ export function usePlayerSyncerSocket(socket, user) {
         textureFrame: player.texture.frame,
       } : null,
     };
-    console.log("Emitting... " + action, data)
     socket.send(
       JSON.stringify({
         type: "game",
@@ -155,15 +167,14 @@ export function usePlayerSyncerSocket(socket, user) {
     }
   }, [socket])
 
-  const bindPlayer = (player) => {
-    setPlayer(player);
+  const joinPlayer = (player) => {
     _emit("join", player);
   };
-  const emitPlayer = (player) => {
+  const movePlayer = (player) => {
     _emit("move", player);
   };
 
-  return { bindPlayer, emitPlayer };
+  return { joinPlayer, movePlayer };
 }
 
 export function useOtherPlayersSyncerSocket(socket, user) {

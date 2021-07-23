@@ -25,6 +25,4 @@ function App() {
     )
 };
 
-console.log("hey")
-
 render(<App />, document.getElementById('app'));

@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import fx from 'glfx';
+import Perspective from 'perspectivejs';
 import { useEffect, useRef, useState } from 'preact/hooks'
 import * as PIXI from "pixi.js"
 import { Viewport } from 'pixi-viewport'
@@ -178,12 +178,10 @@ class Video {
   constructor(videoEl, x = 0, y = 0) {
     this.videoEl = videoEl;
 
-    this.canvas = fx.canvas();
+    this.canvas = document.createElement("canvas");
     this.img = document.createElement("img");
     this.imageResource = new PIXI.ImageResource(this.img);
     this.sprite = PIXI.Sprite.from(this.imageResource);
-
-    window.canvas = this.canvas;
 
     this.sprite.position.x = x;
     this.sprite.position.y = y;
@@ -191,6 +189,13 @@ class Video {
     this.latestRun = 0;
 
     this.sprite.gameLoop = this.gameLoop.bind(this);
+
+    this.debug = PIXI.Sprite.from(PIXI.Texture.WHITE);
+    this.debug.width = 320;
+    this.debug.height = 240;
+    this.debug.tint = 0xFF0000;
+    this.debug.position.x = x;
+    this.debug.position.y = y;
   }
 
   gameLoop(delta) {
@@ -200,31 +205,48 @@ class Video {
       this.latestRun = now;
 
       if (!this.videoEl.paused) {
-        this.canvas.width = this.videoEl.videoWidth;
-        this.canvas.height = this.videoEl.videoHeight;
+        const scaleWidth = this.videoEl.videoWidth / this.videoEl.width;
+        const scaleHeight = this.videoEl.videoHeight / this.videoEl.height;
 
-        // const canvasCtx = this.canvas.getContext('2d');
-        // canvasCtx.mozImageSmoothingEnabled = false;
-        // canvasCtx.webkitImageSmoothingEnabled = false;
-        // canvasCtx.imageSmoothingEnabled = false;
+        const height = this.videoEl.videoHeight / (scaleWidth > scaleHeight ? scaleWidth : scaleHeight);
+        const width = this.videoEl.videoWidth / (scaleWidth > scaleHeight ? scaleWidth : scaleHeight);
 
-        // canvasCtx.drawImage(
-        //   this.videoEl, 0, 0, this.canvas.width * .2, this.canvas.height * .2
-        // );
-        // canvasCtx.drawImage(
-        //   this.canvas,
-        //   0, 0, this.canvas.width * .2, this.canvas.height * .2,
-        //   0, 0, this.canvas.width, this.canvas.height
-        // );
+        // Pixelize first
+        this.canvas.width = width;
+        this.canvas.height = height;
 
-        const texture = this.canvas.texture(this.videoEl);
-        this.canvas.draw(texture).perspective(
-          [0, 0, 0, this.videoEl.videoHeight, this.videoEl.videoWidth, this.videoEl.videoHeight, this.videoEl.videoWidth, 0],
-          [0, 0, 50, this.videoEl.videoHeight - 50, this.videoEl.videoWidth - 50, this.videoEl.videoHeight - 50, this.videoEl.videoWidth, 0]
-        ).update();
+        const canvasCtx = this.canvas.getContext('2d');
+        canvasCtx.mozImageSmoothingEnabled = false;
+        canvasCtx.webkitImageSmoothingEnabled = false;
+        canvasCtx.imageSmoothingEnabled = false;
 
-        this.img.src = canvas.toDataURL();
-        this.imageResource.update();
+        canvasCtx.drawImage(
+          this.videoEl, 0, 0, this.canvas.width * .2, this.canvas.height * .2
+        );
+        canvasCtx.drawImage(
+          this.canvas,
+          0, 0, this.canvas.width * .2, this.canvas.height * .2,
+          0, 0, width, height
+        );
+
+        const image = new Image(this.canvas.width, this.canvas.height);
+        image.src = this.canvas.toDataURL();
+
+        image.onload = () => {
+          const pers = new Perspective(canvasCtx, image);
+          pers.draw([
+              [0, 0],
+              [image.width, 0],
+              [image.width - 50, image.height - 50],
+              [50, image.height - 50],
+          ]);
+
+          this.debug.width = image.width;
+          this.debug.height = image.height - 50;
+
+          this.img.src = this.canvas.toDataURL();
+          this.imageResource.update();
+        }
       }
     }
   }
@@ -272,6 +294,10 @@ class MyGame {
 
       Keyboard.update();
     })
+  }
+
+  addDebug(sprite) {
+    this.viewport.addChild(sprite);
   }
 
   addCharacter(char) {
@@ -345,6 +371,7 @@ class MyGame {
   addVideo(videoEl) {
     const video = new Video(videoEl, 0, 0);
 
+    this.addDebug(video.debug);
     this.addCharacter(video.sprite);
   }
 }
@@ -358,29 +385,33 @@ function Pixi({ user }) {
   const [game, setGame] = useState();
 
   const { socket } = useSocket(user);
-  const { bindPlayer, emitPlayer } = usePlayerSyncerSocket(socket, user);
+  const { joinPlayer, movePlayer } = usePlayerSyncerSocket(socket, user);
   const { otherPlayers } = useOtherPlayersSyncerSocket(socket, user);
-  const { bindVideo } = useVideoSyncerSocket(socket, user);
+  const { bindVideo, changeVideo, videoEmitter } = useVideoSyncerSocket(socket, user);
 
   useEffect(() => {
     if (ref.current && !game && user && videoRef.current) {
       const game = new MyGame(ref.current);
 
       const player = game.addPlayer(user.id);
-      player.events.on("move", () => emitPlayer(player));
-      player.events.on("stop", () => emitPlayer(player));
-      bindPlayer(player);
+      player.events.on("move", () => movePlayer(player));
+      player.events.on("stop", () => movePlayer(player));
+      joinPlayer(player);
 
-      otherPlayers.on("join", (d) => game.handleOtherPlayer(d.from.id, d.data.player));
+      otherPlayers.on("join", (d) => {
+        game.handleOtherPlayer(d.from.id, d.data.player);
+        movePlayer(player);
+      });
       otherPlayers.on("move", (d) => game.handleOtherPlayer(d.from.id, d.data.player));
       otherPlayers.on("left", (d) => game.removeOtherPlayer(d.from.id));
 
       const video = game.addVideo(videoRef.current);
       bindVideo(videoRef.current);
+      videoEmitter.on("change", setVideoURL)
 
-      for (let i = 0; i < 100; i++) {
-        game.addBot();
-      }
+      // for (let i = 0; i < 100; i++) {
+      //   game.addBot();
+      // }
 
       setGame(game);
     }
@@ -400,7 +431,7 @@ function Pixi({ user }) {
         }
 
         setVideoURL(url);
-        setTimeout(() => videoRef.current.load(), 100);
+        changeVideo(url);
       }
     })
   }
@@ -418,15 +449,11 @@ function Pixi({ user }) {
 
       <video
         ref={videoRef}
+        src={videoURL}
         height={240}
         width={320}
         controls
-      >
-        <source
-          src={videoURL}
-          type="video/mp4"
-        />
-      </video>
+      />
     </div>
   );
 }
