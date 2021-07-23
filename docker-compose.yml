@@ -1,5 +1,6 @@
 services:
     back:
+        container_name: back
         build:
             context: .
             dockerfile: Dockerfile.back
@@ -14,6 +15,7 @@ services:
             - .:/app
             - front_build:/app/web/front/build
     front:
+        container_name: front
         build:
             context: .
             dockerfile: Dockerfile.front
@@ -25,6 +27,7 @@ services:
             - 8080:8080
             - 37735:37735
     database:
+        container_name: db
         image: "postgres"
         environment:
             - POSTGRES_USER=unicorn_user

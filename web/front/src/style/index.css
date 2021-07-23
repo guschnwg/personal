@@ -183,7 +183,7 @@ button.small {
 	margin: 0 10px;
 }
 
-.canvas-container {
+/* .canvas-container {
 	position: relative;
 	display: inline-block;
 }
@@ -206,4 +206,4 @@ button.small {
 	top: 50%;
 	background-color: red;
 	z-index: 1000;
-}
+} */

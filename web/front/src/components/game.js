@@ -6,7 +6,12 @@ import { Viewport } from 'pixi-viewport'
 import Keyboard from "pixi.js-keyboard"
 import EventEmitter from 'events';
 import UserGuard from './user-guard';
+import Bump from '../utils/bump'
 import useSocket, { useVideoSyncerSocket, usePlayerSyncerSocket, useOtherPlayersSyncerSocket } from './socket';
+
+const bump = new Bump(PIXI);
+
+const DEBUG = window.location.search.includes("debug=1")
 
 const CAT_TEXTURE = PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-1.png");
 const BOT_TEXTURES = [
@@ -50,6 +55,23 @@ const POSITIONS = {
   }
 }
 
+function isPositionOccupied(bounds, colliders = []) {
+  if (colliders.length === 0) {
+    return false;
+  }
+
+  for (const collider of colliders) {
+    if (bump.hitTestRectangle(bounds, collider)) {
+      console.log("HIT");
+      return true
+    }
+  }
+
+  console.log(bounds, colliders);
+
+  return false;
+}
+
 class Sprite extends PIXI.Sprite {
   gameLoop(delta) { }
 }
@@ -61,21 +83,21 @@ class Player extends Sprite {
     this.id = id;
 
     this.movements = {
-      ArrowLeft: () => {
-        this.position.x -= 1;
-        this.frameGroup = POSITIONS.left;
+      ArrowLeft: {
+        position: () => ({ x: this.position.x - 1, y: this.position.y }),
+        frameGroup: POSITIONS.left,
       },
-      ArrowRight: () => {
-        this.position.x += 1;
-        this.frameGroup = POSITIONS.right;
+      ArrowRight: {
+        position: () => ({ x: this.position.x + 1, y: this.position.y }),
+        frameGroup: POSITIONS.right,
       },
-      ArrowUp: () => {
-        this.position.y -= 1;
-        this.frameGroup = POSITIONS.up;
+      ArrowUp: {
+        position: () => ({ x: this.position.x, y: this.position.y - 1 }),
+        frameGroup: POSITIONS.up,
       },
-      ArrowDown: () => {
-        this.position.y += 1;
-        this.frameGroup = POSITIONS.down;
+      ArrowDown: {
+        position: () => ({ x: this.position.x, y: this.position.y + 1 }),
+        frameGroup: POSITIONS.down,
       },
     };
     this.possibleMovements = Object.keys(this.movements);
@@ -85,13 +107,19 @@ class Player extends Sprite {
 
     this.texture.frame = this.frameGroup.stand;
 
-    this.pivot.set(this.width / 2, this.height / 2);
-
     this.zIndex = 99999999;
-    window.player = this;
+
+    this.debug = PIXI.Sprite.from(PIXI.Texture.WHITE);
+    this.debug.width = this.width;
+    this.debug.height = this.height;
+    this.debug.tint = 0xFF0000;
+    this.debug.position.x = this.position.x;
+    this.debug.position.y = this.position.y;
+
+    this.collidable = true;
   }
 
-  gameLoop(delta) {
+  gameLoop(delta, colliders = []) {
     const wasMoving = this.movementStack.length > 0;
 
     this.possibleMovements.forEach(key => {
@@ -104,7 +132,16 @@ class Player extends Sprite {
     })
 
     if (this.movementStack.length > 0) {
-      this.movements[this.movementStack[this.movementStack.length - 1]]();
+      const action = this.movements[this.movementStack[this.movementStack.length - 1]];
+
+      this.frameGroup = action.frameGroup;
+
+      const newPosition = action.position();
+      const bounds = new PIXI.Rectangle(newPosition.x, newPosition.y, this.width, this.height);
+      if (!isPositionOccupied(bounds, colliders)) {
+        this.position = newPosition;
+        this.debug.position = newPosition;
+      }
 
       this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 250) % 2];
 
@@ -123,6 +160,8 @@ class OtherPlayer extends Sprite {
   constructor(id, texture) {
     super(texture);
     this.id = id;
+
+    this.collidable = true;
   }
 
   gameLoop(delta) {
@@ -140,9 +179,13 @@ class Bot extends Sprite {
     this.vy = 0;
 
     this.lastNumber = 0;
+
+    this.texture.frame = this.frameGroup.stand;
+
+    this.collidable = true;
   }
 
-  gameLoop(delta) {
+  gameLoop(delta, colliders = []) {
     const number = Math.floor(Date.now() / 1000);
     if (number !== this.lastNumber) {
       this.lastNumber = number;
@@ -165,9 +208,19 @@ class Bot extends Sprite {
     }
 
     if (this.vx !== 0 || this.vy !== 0) {
-      this.x += this.vx;
-      this.y += this.vy;
-      this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 250) % 2];
+      const newPosition = {
+        x: this.position.x + this.vx,
+        y: this.position.y + this.vy,
+      }
+
+      const bounds = new PIXI.Rectangle(newPosition.x, newPosition.y, this.width, this.height);
+      if (!isPositionOccupied(bounds, colliders)) {
+        this.position = newPosition;
+
+        this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 250) % 2];
+      } else {
+        this.texture.frame = this.frameGroup.stand;
+      }
     } else {
       this.texture.frame = this.frameGroup.stand;
     }
@@ -235,10 +288,10 @@ class Video {
         image.onload = () => {
           const pers = new Perspective(canvasCtx, image);
           pers.draw([
-              [0, 0],
-              [image.width, 0],
-              [image.width - 50, image.height - 50],
-              [50, image.height - 50],
+            [0, 0],
+            [image.width, 0],
+            [image.width - 50, image.height - 50],
+            [50, image.height - 50],
           ]);
 
           this.debug.width = image.width;
@@ -255,7 +308,6 @@ class Video {
 class MyGame {
   constructor(view) {
     this.app = new PIXI.Application({ height: 500, width: 500, view });
-    window.app = this.app;
 
     this.viewport = new Viewport({
       screenWidth: this.app.screen.width,
@@ -274,8 +326,6 @@ class MyGame {
     );
     this.viewport.sortableChildren = true;
 
-    window.viewport = this.viewport;
-
     this.app.stage.addChild(this.viewport);
 
     this.all = [];
@@ -283,30 +333,33 @@ class MyGame {
 
     this.app.ticker.add(delta => {
       if (this.player) {
-        this.player.gameLoop(delta);
+        this.player.gameLoop(delta, this.all.filter(a => a != this.player && a.collidable).map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height)));
         this.viewport.moveCenter(
           this.player.position.x + this.viewport.worldWidth / 4,
           this.player.position.y + this.viewport.worldHeight / 4,
         );
       }
 
-      this.all.forEach(c => c.gameLoop(delta));
+      this.all.forEach(c => c.gameLoop(delta, [
+        new PIXI.Rectangle(this.player.position.x, this.player.position.y, this.player.width, this.player.height),
+        ...this.all.filter(a => a != c && a.collidable).map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height))
+      ]));
 
       Keyboard.update();
     })
   }
 
-  addDebug(sprite) {
-    this.viewport.addChild(sprite);
-  }
+  addToStage(item, debug = undefined) {
+    this.viewport.addChild(item);
+    this.all.push(item);
 
-  addCharacter(char) {
-    this.viewport.addChild(char);
-    this.all.push(char);
+    if (debug && DEBUG) {
+      this.viewport.addChild(debug);
+    }
   }
-  removeCharacter(char) {
-    this.viewport.removeChild(char);
-    this.all = this.all.filter(c => c !== char);
+  removeFromStage(item) {
+    this.viewport.removeChild(item);
+    this.all = this.all.filter(c => c !== item);
   }
 
   addPlayer(id) {
@@ -314,6 +367,10 @@ class MyGame {
 
     this.player = player;
     this.viewport.addChild(this.player);
+
+    if (DEBUG && player.debug) {
+      this.viewport.addChild(player.debug);
+    }
 
     return player;
   }
@@ -324,7 +381,7 @@ class MyGame {
     if (!otherPlayer) {
       otherPlayer = new OtherPlayer(id, CAT_TEXTURE.clone());
 
-      this.addCharacter(otherPlayer);
+      this.addToStage(otherPlayer);
     }
 
     for (const key in data) {
@@ -339,22 +396,30 @@ class MyGame {
   }
 
   removeOtherPlayer(id) {
-    this.removeCharacter(this.all.find(a => a.id === id));
+    this.removeFromStage(this.all.find(a => a.id === id));
   }
 
-  addBot(
-    id,
-    x = Math.floor(Math.random() * this.app.screen.width),
-    y = Math.floor(Math.random() * this.app.screen.height)
-  ) {
+  freePosition(width, height) {
+    const x = Math.floor(Math.random() * this.app.screen.width);
+    const y = Math.floor(Math.random() * this.app.screen.height);
+
+    const rect = new PIXI.Rectangle(x, y, width, height);
+    if (isPositionOccupied(rect, this.all.map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height)))) {
+      return this.freePosition(width, height);
+    }
+
+    return { x: rect.x, y: rect.y };
+  }
+
+  addBot() {
     const bot = new Bot(BOT_TEXTURES[this.all.length % BOT_TEXTURES.length].clone());
 
     bot.isBot = true;
-    bot.id = id;
-    bot.position.x = x;
-    bot.position.y = y;
+    bot.id = Math.random();
 
-    this.addCharacter(bot);
+    bot.position = this.freePosition(bot.width, bot.height);
+
+    this.addToStage(bot);
 
     return bot;
   }
@@ -365,14 +430,13 @@ class MyGame {
       return
     }
 
-    this.removeCharacter(bots[Math.floor(Math.random() % bots.length)])
+    this.removeFromStage(bots[Math.floor(Math.random() % bots.length)])
   }
 
   addVideo(videoEl) {
     const video = new Video(videoEl, 0, 0);
 
-    this.addDebug(video.debug);
-    this.addCharacter(video.sprite);
+    this.addToStage(video.sprite, video.debug);
   }
 }
 
@@ -409,9 +473,9 @@ function Pixi({ user }) {
       bindVideo(videoRef.current);
       videoEmitter.on("change", setVideoURL)
 
-      // for (let i = 0; i < 100; i++) {
-      //   game.addBot();
-      // }
+      for (let i = 0; i < 10; i++) {
+        game.addBot();
+      }
 
       setGame(game);
     }
@@ -419,15 +483,15 @@ function Pixi({ user }) {
 
   const fetchVideoURL = () => {
     const id = youtubeURL.replace("https://www.youtube.com/watch?v=", "");
-  
+
     fetch("api/youtube?id=" + id).then(res => res.json()).then(data => {
       if (data && data.results && data.results.formats) {
         const url = new URL(data.results.formats[data.results.formats.length - 1].url);
 
         if (window.USE_PROXY) {
-            url.search += "&host=" + url.host;
-            url.host = window.location.host;
-            url.protocol = window.location.protocol;
+          url.search += "&host=" + url.host;
+          url.host = window.location.host;
+          url.protocol = window.location.protocol;
         }
 
         setVideoURL(url);
