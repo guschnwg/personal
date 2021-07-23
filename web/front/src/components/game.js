@@ -62,12 +62,9 @@ function isPositionOccupied(bounds, colliders = []) {
 
   for (const collider of colliders) {
     if (bump.hitTestRectangle(bounds, collider)) {
-      console.log("HIT");
       return true
     }
   }
-
-  console.log(bounds, colliders);
 
   return false;
 }
@@ -350,12 +347,12 @@ class MyGame {
   }
 
   addToStage(item, debug = undefined) {
-    this.viewport.addChild(item);
-    this.all.push(item);
-
     if (debug && DEBUG) {
       this.viewport.addChild(debug);
     }
+
+    this.viewport.addChild(item);
+    this.all.push(item);
   }
   removeFromStage(item) {
     this.viewport.removeChild(item);
