@@ -11,57 +11,109 @@ import useSocket, { useVideoSyncerSocket, usePlayerSyncerSocket, useOtherPlayers
 
 const bump = new Bump(PIXI);
 
-const DEBUG = window.location.search.includes("debug=1")
-
-const CAT_TEXTURE = PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-1.png");
-const BOT_TEXTURES = [
-  PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-2.png"),
-  PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Cat 01-3.png"),
-  PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Dog 01-1.png"),
-  PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Dog 01-2.png"),
-  PIXI.Texture.from("front/assets/game/PIPOYA FREE RPG Character Sprites 32x32/Animal/Dog 01-3.png"),
-];
-const POSITIONS = {
+const FRAMES = {
   up: {
-    stand: new PIXI.Rectangle(32, 96, 32, 32),
+    stand: [
+      new PIXI.Rectangle(0, 20, 16, 20),
+    ],
     walk: [
-      new PIXI.Rectangle(64, 96, 32, 32),
-      new PIXI.Rectangle(0, 96, 32, 32),
+      new PIXI.Rectangle(16, 20, 16, 20),
+      new PIXI.Rectangle(16, 20, 16, 20),
+      new PIXI.Rectangle(16, 20, 16, 20),
+      new PIXI.Rectangle(32, 20, 16, 20),
+      new PIXI.Rectangle(48, 20, 16, 20),
+      new PIXI.Rectangle(48, 20, 16, 20),
+      new PIXI.Rectangle(48, 20, 16, 20),
+      new PIXI.Rectangle(32, 20, 16, 20),
     ]
   },
 
   down: {
-    stand: new PIXI.Rectangle(32, 0, 32, 32),
+    stand: [
+      new PIXI.Rectangle(0, 0, 16, 20),
+    ],
     walk: [
-      new PIXI.Rectangle(64, 0, 32, 32),
-      new PIXI.Rectangle(0, 0, 32, 32),
+      new PIXI.Rectangle(16, 0, 16, 20),
+      new PIXI.Rectangle(16, 0, 16, 20),
+      new PIXI.Rectangle(16, 0, 16, 20),
+      new PIXI.Rectangle(32, 0, 16, 20),
+      new PIXI.Rectangle(48, 0, 16, 20),
+      new PIXI.Rectangle(48, 0, 16, 20),
+      new PIXI.Rectangle(48, 0, 16, 20),
+      new PIXI.Rectangle(32, 0, 16, 20),
     ]
   },
 
   left: {
-    stand: new PIXI.Rectangle(32, 32, 32, 32),
+    stand: [
+      new PIXI.Rectangle(0, 40, 16, 20),
+    ],
     walk: [
-      new PIXI.Rectangle(64, 32, 32, 32),
-      new PIXI.Rectangle(0, 32, 32, 32),
+      new PIXI.Rectangle(16, 40, 16, 20),
+      new PIXI.Rectangle(16, 40, 16, 20),
+      new PIXI.Rectangle(16, 40, 16, 20),
+      new PIXI.Rectangle(32, 40, 16, 20),
+      new PIXI.Rectangle(48, 40, 16, 20),
+      new PIXI.Rectangle(48, 40, 16, 20),
+      new PIXI.Rectangle(48, 40, 16, 20),
+      new PIXI.Rectangle(32, 40, 16, 20),
     ]
   },
 
   right: {
-    stand: new PIXI.Rectangle(32, 64, 32, 32),
+    stand: [
+      new PIXI.Rectangle(0, 60, 16, 20),
+    ],
     walk: [
-      new PIXI.Rectangle(64, 64, 32, 32),
-      new PIXI.Rectangle(0, 64, 32, 32),
+      new PIXI.Rectangle(16, 60, 16, 20),
+      new PIXI.Rectangle(16, 60, 16, 20),
+      new PIXI.Rectangle(16, 60, 16, 20),
+      new PIXI.Rectangle(32, 60, 16, 20),
+      new PIXI.Rectangle(48, 60, 16, 20),
+      new PIXI.Rectangle(48, 60, 16, 20),
+      new PIXI.Rectangle(48, 60, 16, 20),
+      new PIXI.Rectangle(32, 60, 16, 20),
     ]
   }
 }
+const ASSETS = [
+  {
+    texture: PIXI.Texture.from("front/assets/game/version_2.0_isaiah658s_pixel_pack_2/Characters/Character 1.png"),
+    frames: FRAMES,
+  },
 
-function isPositionOccupied(bounds, colliders = []) {
-  if (colliders.length === 0) {
+  {
+    texture: PIXI.Texture.from("front/assets/game/version_2.0_isaiah658s_pixel_pack_2/Characters/Character 2.png"),
+    frames: FRAMES,
+  },
+  {
+    texture: PIXI.Texture.from("front/assets/game/version_2.0_isaiah658s_pixel_pack_2/Characters/Character 3.png"),
+    frames: FRAMES,
+  },
+  {
+    texture: PIXI.Texture.from("front/assets/game/version_2.0_isaiah658s_pixel_pack_2/Characters/Character 4.png"),
+    frames: FRAMES,
+  },
+  {
+    texture: PIXI.Texture.from("front/assets/game/version_2.0_isaiah658s_pixel_pack_2/Characters/Character 5.png"),
+    frames: FRAMES,
+  },
+  {
+    texture: PIXI.Texture.from("front/assets/game/version_2.0_isaiah658s_pixel_pack_2/Characters/Character 6.png"),
+    frames: FRAMES,
+  },
+]
+
+const PLAYER_ASSET = ASSETS[0];
+const BOT_ASSETS = [ASSETS[1], ASSETS[2], ASSETS[3], ASSETS[4], ASSETS[5]];
+
+function doesRectangleCollideWithRectangles(rectangle, collidables = []) {
+  if (collidables.length === 0) {
     return false;
   }
 
-  for (const collider of colliders) {
-    if (bump.hitTestRectangle(bounds, collider)) {
+  for (const collidable of collidables) {
+    if (bump.hitTestRectangle(rectangle, collidable)) {
       return true
     }
   }
@@ -74,49 +126,43 @@ class Sprite extends PIXI.Sprite {
 }
 
 class Player extends Sprite {
-  constructor(id, texture) {
-    super(texture);
+  constructor(id, asset) {
+    super(asset.texture);
 
     this.id = id;
+    this.asset = asset;
 
     this.movements = {
       ArrowLeft: {
         position: () => ({ x: this.position.x - 1, y: this.position.y }),
-        frameGroup: POSITIONS.left,
+        frameGroup: this.asset.frames.left,
       },
       ArrowRight: {
         position: () => ({ x: this.position.x + 1, y: this.position.y }),
-        frameGroup: POSITIONS.right,
+        frameGroup: this.asset.frames.right,
       },
       ArrowUp: {
         position: () => ({ x: this.position.x, y: this.position.y - 1 }),
-        frameGroup: POSITIONS.up,
+        frameGroup: this.asset.frames.up,
       },
       ArrowDown: {
         position: () => ({ x: this.position.x, y: this.position.y + 1 }),
-        frameGroup: POSITIONS.down,
+        frameGroup: this.asset.frames.down,
       },
     };
     this.possibleMovements = Object.keys(this.movements);
     this.movementStack = [];
-    this.frameGroup = POSITIONS.down;
+    this.frameGroup = this.asset.frames.down;
     this.events = new EventEmitter();
 
-    this.texture.frame = this.frameGroup.stand;
+    this.texture.frame = this.frameGroup.stand[0];
 
     this.zIndex = 99999999;
 
-    this.debug = PIXI.Sprite.from(PIXI.Texture.WHITE);
-    this.debug.width = this.width;
-    this.debug.height = this.height;
-    this.debug.tint = 0xFF0000;
-    this.debug.position.x = this.position.x;
-    this.debug.position.y = this.position.y;
-
-    this.collidable = true;
+    this.isCollidable = true;
   }
 
-  gameLoop(delta, colliders = []) {
+  gameLoop(delta, collidables = []) {
     const wasMoving = this.movementStack.length > 0;
 
     this.possibleMovements.forEach(key => {
@@ -133,18 +179,17 @@ class Player extends Sprite {
 
       this.frameGroup = action.frameGroup;
 
+      this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 75) % this.frameGroup.walk.length];
+
       const newPosition = action.position();
       const bounds = new PIXI.Rectangle(newPosition.x, newPosition.y, this.width, this.height);
-      if (!isPositionOccupied(bounds, colliders)) {
+      if (!doesRectangleCollideWithRectangles(bounds, collidables)) {
         this.position = newPosition;
-        this.debug.position = newPosition;
       }
-
-      this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 250) % 2];
 
       this.events.emit('move');
     } else {
-      this.texture.frame = this.frameGroup.stand;
+      this.texture.frame = this.frameGroup.stand[Math.floor(Date.now() / 75) % this.frameGroup.stand.length];
 
       if (wasMoving) {
         this.events.emit('stop');
@@ -154,11 +199,13 @@ class Player extends Sprite {
 }
 
 class OtherPlayer extends Sprite {
-  constructor(id, texture) {
-    super(texture);
-    this.id = id;
+  constructor(id, asset) {
+    super(asset.texture.clone());
+  
+    this.asset = asset;
 
-    this.collidable = true;
+    this.id = id;
+    this.isCollidable = true;
   }
 
   gameLoop(delta) {
@@ -167,22 +214,24 @@ class OtherPlayer extends Sprite {
 }
 
 class Bot extends Sprite {
-  constructor(texture) {
-    super(texture);
+  constructor(asset) {
+    super(asset.texture.clone());
 
-    this.frameGroup = POSITIONS.down;
+    this.asset = asset;
+
+    this.frameGroup = asset.frames.down;
 
     this.vx = 0;
     this.vy = 0;
 
     this.lastNumber = 0;
 
-    this.texture.frame = this.frameGroup.stand;
+    this.texture.frame = this.frameGroup.stand[0];
 
-    this.collidable = true;
+    this.isCollidable = true;
   }
 
-  gameLoop(delta, colliders = []) {
+  gameLoop(delta, collidables = []) {
     const number = Math.floor(Date.now() / 1000);
     if (number !== this.lastNumber) {
       this.lastNumber = number;
@@ -191,35 +240,33 @@ class Bot extends Sprite {
       const random = Math.floor(Math.random() * 4);
       if (random === 3) {
         this.vx = 1;
-        this.frameGroup = POSITIONS.right;
+        this.frameGroup = this.asset.frames.right;
       } else if (random === 2) {
         this.vx = -1;
-        this.frameGroup = POSITIONS.left;
+        this.frameGroup = this.asset.frames.left;
       } else if (random === 1) {
         this.vy = -1;
-        this.frameGroup = POSITIONS.up;
+        this.frameGroup = this.asset.frames.up;
       } else if (random === 0) {
         this.vy = 1;
-        this.frameGroup = POSITIONS.down;
+        this.frameGroup = this.asset.frames.down;
       }
     }
 
     if (this.vx !== 0 || this.vy !== 0) {
+      this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 75) % this.frameGroup.walk.length];
+
       const newPosition = {
         x: this.position.x + this.vx,
         y: this.position.y + this.vy,
       }
 
       const bounds = new PIXI.Rectangle(newPosition.x, newPosition.y, this.width, this.height);
-      if (!isPositionOccupied(bounds, colliders)) {
+      if (!doesRectangleCollideWithRectangles(bounds, collidables)) {
         this.position = newPosition;
-
-        this.texture.frame = this.frameGroup.walk[Math.floor(Date.now() / 250) % 2];
-      } else {
-        this.texture.frame = this.frameGroup.stand;
       }
     } else {
-      this.texture.frame = this.frameGroup.stand;
+      this.texture.frame = this.frameGroup.stand[Math.floor(Date.now() / 75) % this.frameGroup.stand.length];
     }
   }
 }
@@ -239,13 +286,6 @@ class Video {
     this.latestRun = 0;
 
     this.sprite.gameLoop = this.gameLoop.bind(this);
-
-    this.debug = PIXI.Sprite.from(PIXI.Texture.WHITE);
-    this.debug.width = 320;
-    this.debug.height = 240;
-    this.debug.tint = 0xFF0000;
-    this.debug.position.x = x;
-    this.debug.position.y = y;
   }
 
   gameLoop(delta) {
@@ -291,9 +331,6 @@ class Video {
             [50, image.height - 50],
           ]);
 
-          this.debug.width = image.width;
-          this.debug.height = image.height - 50;
-
           this.img.src = this.canvas.toDataURL();
           this.imageResource.update();
         }
@@ -310,17 +347,9 @@ class MyGame {
       screenWidth: this.app.screen.width,
       screenHeight: this.app.screen.height,
 
-      worldWidth: 1000,
-      worldHeight: 1000,
-
       interaction: this.app.renderer.plugins.interaction
     });
-    this.viewport.fit();
-    this.viewport.scaled = 1;
-    this.viewport.pivot.set(
-      this.viewport.screenWidth / 2 * -1,
-      this.viewport.screenHeight / 2 * -1
-    );
+    this.viewport.scaled = 1.2;
     this.viewport.sortableChildren = true;
 
     this.app.stage.addChild(this.viewport);
@@ -329,28 +358,15 @@ class MyGame {
     this.player = undefined;
 
     this.app.ticker.add(delta => {
-      if (this.player) {
-        this.player.gameLoop(delta, this.all.filter(a => a != this.player && a.collidable).map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height)));
-        this.viewport.moveCenter(
-          this.player.position.x + this.viewport.worldWidth / 4,
-          this.player.position.y + this.viewport.worldHeight / 4,
-        );
-      }
-
-      this.all.forEach(c => c.gameLoop(delta, [
-        new PIXI.Rectangle(this.player.position.x, this.player.position.y, this.player.width, this.player.height),
-        ...this.all.filter(a => a != c && a.collidable).map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height))
-      ]));
+      this.all.forEach(c => {
+        c.gameLoop(delta, this.all.filter(a => a != c && a.isCollidable));
+      });
 
       Keyboard.update();
     })
   }
 
-  addToStage(item, debug = undefined) {
-    if (debug && DEBUG) {
-      this.viewport.addChild(debug);
-    }
-
+  addToStage(item) {
     this.viewport.addChild(item);
     this.all.push(item);
   }
@@ -360,14 +376,15 @@ class MyGame {
   }
 
   addPlayer(id) {
-    const player = new Player(id, CAT_TEXTURE);
+    const player = new Player(id, PLAYER_ASSET);
 
-    this.player = player;
-    this.viewport.addChild(this.player);
+    this.player = window.player = player;
 
-    if (DEBUG && player.debug) {
-      this.viewport.addChild(player.debug);
-    }
+    const position = this.freePosition(this.player.width, this.player.height);
+    this.player.position = position;
+
+    this.addToStage(this.player);
+    this.viewport.follow(this.player);
 
     return player;
   }
@@ -376,7 +393,7 @@ class MyGame {
     let otherPlayer = this.all.find(a => a.id === id);
 
     if (!otherPlayer) {
-      otherPlayer = new OtherPlayer(id, CAT_TEXTURE.clone());
+      otherPlayer = new OtherPlayer(id, PLAYER_ASSET);
 
       this.addToStage(otherPlayer);
     }
@@ -400,16 +417,16 @@ class MyGame {
     const x = Math.floor(Math.random() * this.app.screen.width);
     const y = Math.floor(Math.random() * this.app.screen.height);
 
-    const rect = new PIXI.Rectangle(x, y, width, height);
-    if (isPositionOccupied(rect, this.all.map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height)))) {
+    const possible = new PIXI.Rectangle(x, y, width, height);
+    if (doesRectangleCollideWithRectangles(possible, this.all.map(a => new PIXI.Rectangle(a.position.x, a.position.y, a.width, a.height)))) {
       return this.freePosition(width, height);
     }
 
-    return { x: rect.x, y: rect.y };
+    return { x: possible.x, y: possible.y };
   }
 
   addBot() {
-    const bot = new Bot(BOT_TEXTURES[this.all.length % BOT_TEXTURES.length].clone());
+    const bot = new Bot(BOT_ASSETS[this.all.length % BOT_ASSETS.length]);
 
     bot.isBot = true;
     bot.id = Math.random();
@@ -433,7 +450,7 @@ class MyGame {
   addVideo(videoEl) {
     const video = new Video(videoEl, 0, 0);
 
-    this.addToStage(video.sprite, video.debug);
+    this.addToStage(video.sprite);
   }
 }
 
@@ -470,7 +487,7 @@ function Pixi({ user }) {
       bindVideo(videoRef.current);
       videoEmitter.on("change", setVideoURL)
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 15; i++) {
         game.addBot();
       }
 
