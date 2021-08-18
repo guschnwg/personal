@@ -1,5 +1,4 @@
 app.out
-web/static
 web/build
 app
 main
@@ -7,3 +6,4 @@ main
 node_modules
 size-plugin.json
 .env
+web/.cache

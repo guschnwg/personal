@@ -120,7 +120,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func StaticHandler() http.Handler {
-	return http.StripPrefix("/static/", http.FileServer(http.Dir("./web/build/static")))
+	return http.StripPrefix("/static/", http.FileServer(http.Dir("./web/build")))
 }
 
 func FullHandler(w http.ResponseWriter, r *http.Request) {
@@ -332,7 +332,6 @@ func BindSocketIo(r *mux.Router) {
 			fmt.Printf("socketio listen error: %s\n", err)
 		}
 	}()
-	defer server.Close()
 
 	r.Handle("/socket.io/", server)
 }

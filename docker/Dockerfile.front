@@ -3,9 +3,7 @@ FROM node:14.17.5 AS base
 COPY . /app
 WORKDIR /app/web
 
-RUN npm install -g nodemon
-
 RUN rm -rf node_modules
 RUN yarn install
 
-CMD nodemon --watch src --watch public --ext tsx,css,ts,html --exec yarn build
+CMD yarn start
