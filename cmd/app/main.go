@@ -38,7 +38,6 @@ func main() {
 
 	r.PathPrefix("/static/").Handler(app.StaticHandler())
 
-	r.PathPrefix("/front/").Handler(app.FrontHandler())
 	r.PathPrefix("/").HandlerFunc(app.IndexHandler)
 
 	port := os.Getenv("PORT")

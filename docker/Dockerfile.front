@@ -1,9 +1,11 @@
-FROM node:12.20.1 AS base
+FROM node:14.17.5 AS base
 
 COPY . /app
-WORKDIR /app/web/front
+WORKDIR /app/web
+
+RUN npm install -g nodemon
 
 RUN rm -rf node_modules
-RUN npm install
+RUN yarn install
 
-CMD npm run dev
+CMD nodemon --watch src --watch public --ext tsx,css,ts,html --exec yarn build

@@ -116,15 +116,11 @@ func LyricsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "web/front/build/index.html")
-}
-
-func FrontHandler() http.Handler {
-	return http.StripPrefix("/front/", http.FileServer(http.Dir("./web/front/build")))
+	http.ServeFile(w, r, "web/build/index.html")
 }
 
 func StaticHandler() http.Handler {
-	return http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static")))
+	return http.StripPrefix("/static/", http.FileServer(http.Dir("./web/build/static")))
 }
 
 func FullHandler(w http.ResponseWriter, r *http.Request) {

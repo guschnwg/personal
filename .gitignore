@@ -1,6 +1,6 @@
 app.out
 web/static
-web/front/build
+web/build
 app
 main
 .DS_store

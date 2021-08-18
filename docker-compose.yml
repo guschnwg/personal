@@ -13,7 +13,7 @@ services:
             - 8000:8000
         volumes:
             - .:/app
-            - front_build:/app/web/front/build
+            - front_build:/app/web/build
     front:
         container_name: front
         build:
@@ -21,8 +21,8 @@ services:
             dockerfile: ./docker/Dockerfile.front
         volumes:
             - .:/app
-            - node_modules:/app/web/front/node_modules
-            - front_build:/app/web/front/build
+            - node_modules:/app/web/node_modules
+            - front_build:/app/web/build
         ports:
             - 8080:8080
             - 37735:37735

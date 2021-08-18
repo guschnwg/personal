@@ -9,16 +9,16 @@ RUN make build
 
 FROM node:14.17.0 AS front
 
-COPY web/front /app
+COPY web /app
 WORKDIR /app
 
-RUN npm install
-RUN npm run build
+RUN yarn install
+RUN yarn build
 
 FROM python:3.8-buster AS dist
 
 COPY --from=base /app/main /
-COPY --from=front /app/build/ /web/front/build/
+COPY --from=front /app/build/ /web/build/
 
 RUN pip install youtube_dl
 
