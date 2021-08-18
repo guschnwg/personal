@@ -8,12 +8,14 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"strconv"
-	"sync"
 	"time"
 
+	socketio "github.com/googollee/go-socket.io"
+	"github.com/googollee/go-socket.io/engineio"
+	"github.com/googollee/go-socket.io/engineio/transport"
+	"github.com/googollee/go-socket.io/engineio/transport/polling"
+	"github.com/googollee/go-socket.io/engineio/transport/websocket"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 	"github.com/guschnwg/personal/pkg/crawlers"
 	"github.com/guschnwg/personal/pkg/database"
 	"github.com/patrickmn/go-cache"
@@ -282,157 +284,61 @@ func BindProxy(r *mux.Router) {
 	})
 }
 
-type client struct {
-	User database.User
-	c    *websocket.Conn
-}
-
-func (c *client) listenToMessage(handler *websocketHandler) {
-	for {
-		mt, message, err := c.c.ReadMessage()
-		if err != nil {
-			c.c.Close()
-			break
-		}
-
-		msg := websocketMessageReceived{}
-		json.Unmarshal(message, &msg)
-
-		if msg.To == 0 {
-			handler.broadcast(c, msg.websocketMessage)
-			continue
-		}
-
-		handler.sendToUser(c, msg.To, msg.websocketMessage, mt)
-		if c.User.ID != msg.To {
-			handler.sendToUser(c, c.User.ID, msg.websocketMessage, mt)
-		}
+func BindSocketIo(r *mux.Router) {
+	allowOriginFunc := func(r *http.Request) bool {
+		return true
 	}
-}
 
-type websocketHandler struct {
-	clients []*client
-	mu      sync.Mutex
-}
+	server := socketio.NewServer(&engineio.Options{
+		Transports: []transport.Transport{
+			&polling.Transport{
+				CheckOrigin: allowOriginFunc,
+			},
+			&websocket.Transport{
+				CheckOrigin: allowOriginFunc,
+			},
+		},
+	})
 
-type websocketMessage struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
-}
-
-type websocketMessageReceived struct {
-	To int `json:"to"`
-	websocketMessage
-}
-
-type websocketMessageToSend struct {
-	From database.User `json:"from"`
-	websocketMessage
-}
-
-func (handler *websocketHandler) addClient(c *client) {
-	handler.clients = append(handler.clients, c)
-
-	// When disconnecting, remove me from the clients list
-	c.c.SetCloseHandler(func(code int, text string) error {
-		handler.removeClient(c)
-		handler.broadcastClientLeft(c)
+	server.OnConnect("/", func(s socketio.Conn) error {
+		s.SetContext("")
+		fmt.Println("connected:", s.ID())
 		return nil
 	})
-}
 
-func (handler *websocketHandler) removeClient(c *client) {
-	remainingClients := []*client{}
-	for _, client := range handler.clients {
-		if client != c {
-			remainingClients = append(remainingClients, client)
-		}
-	}
-	handler.clients = remainingClients
-}
-
-func (handler *websocketHandler) broadcastClientJoined(new *client) {
-	handler.broadcast(nil, websocketMessage{"joined", new.User})
-}
-
-func (handler *websocketHandler) broadcastClientLeft(left *client) {
-	handler.broadcast(nil, websocketMessage{"left", left.User})
-}
-
-func (handler *websocketHandler) broadcastEveryoneHere() {
-	everyone := []database.User{}
-	for _, client := range handler.clients {
-		everyone = append(everyone, client.User)
-	}
-
-	handler.broadcast(nil, websocketMessage{"here", everyone})
-}
-
-func (handler *websocketHandler) broadcast(from *client, msg websocketMessage) {
-	user := database.User{}
-	if from != nil {
-		user = from.User
-	}
-
-	for _, client := range handler.clients {
-		handler.send(client, websocketMessageToSend{user, msg})
-	}
-}
-
-func (handler *websocketHandler) sendToUser(from *client, userID int, msg websocketMessage, mt int) {
-	user := database.User{}
-	if from != nil {
-		user = from.User
-	}
-
-	for _, client := range handler.clients {
-		if client.User.ID == userID {
-			handler.send(client, websocketMessageToSend{user, msg})
-		}
-	}
-}
-
-func (handler *websocketHandler) send(client *client, msg websocketMessageToSend) {
-	handler.mu.Lock()
-	defer handler.mu.Unlock()
-
-	client.c.WriteJSON(msg)
-}
-
-func BindWebSocket(r *mux.Router) {
-	upgrader := websocket.Upgrader{}
-	handler := &websocketHandler{clients: []*client{}}
-
-	r.HandleFunc("/websocket", func(w http.ResponseWriter, r *http.Request) {
-		id, _ := strconv.Atoi(r.URL.Query().Get("user_id"))
-
-		db := database.DB()
-		user := database.User{}
-		db.First(&user, "id = ?", id)
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
-		}
-
-		c, _ := upgrader.Upgrade(w, r, nil)
-		defer c.Close()
-
-		cli := &client{user, c}
-
-		handler.addClient(cli)
-		handler.broadcastClientJoined(cli)
-		handler.broadcastEveryoneHere()
-
-		cli.listenToMessage(handler)
+	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
+		fmt.Println("notice:", msg)
+		s.Emit("reply", "have "+msg)
 	})
 
-	r.HandleFunc("/websocket/{id}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		id, _ := strconv.Atoi(vars["id"])
-
-		handler.sendToUser(nil, id, websocketMessage{"message", "HELLO"}, websocket.TextMessage)
-
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": true})
+	server.OnEvent("/chat", "msg", func(s socketio.Conn, msg string) string {
+		s.SetContext(msg)
+		return "recv " + msg
 	})
+
+	server.OnEvent("/", "bye", func(s socketio.Conn) string {
+		last := s.Context().(string)
+		s.Emit("bye", last)
+		s.Close()
+		return last
+	})
+
+	server.OnError("/", func(s socketio.Conn, e error) {
+		fmt.Println("meet error:", e)
+	})
+
+	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
+		fmt.Println("closed", reason)
+	})
+
+	go func() {
+		if err := server.Serve(); err != nil {
+			fmt.Printf("socketio listen error: %s\n", err)
+		}
+	}()
+	defer server.Close()
+
+	r.Handle("/socket.io/", server)
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
