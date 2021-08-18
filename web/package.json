@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "parcel watch --out-dir ./build --public-url /static/ --no-cache --hmr-port 37735 --no-source-maps index.html",
-    "build": "parcel build --out-dir ./build --public-url /static/ --no-cache --hmr-port 37735 index.html"
+    "build": "parcel build --out-dir ./build --public-url /static/ --no-cache index.html"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.11.4",
