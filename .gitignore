@@ -1,6 +1,5 @@
 app.out
 web/build
-app
 main
 .DS_store
 node_modules
