@@ -10,11 +10,6 @@ import (
 	"os"
 	"time"
 
-	socketio "github.com/googollee/go-socket.io"
-	"github.com/googollee/go-socket.io/engineio"
-	"github.com/googollee/go-socket.io/engineio/transport"
-	"github.com/googollee/go-socket.io/engineio/transport/polling"
-	"github.com/googollee/go-socket.io/engineio/transport/websocket"
 	"github.com/gorilla/mux"
 	"github.com/guschnwg/personal/pkg/crawlers"
 	"github.com/guschnwg/personal/pkg/database"
@@ -275,65 +270,7 @@ func BindProxy(r *mux.Router) {
 		},
 	}
 
-	r.HandleFunc("/videoplayback", func(w http.ResponseWriter, r *http.Request) {
-		proxy.ServeHTTP(w, r)
-	})
-}
-
-func BindSocketIo(r *mux.Router) {
-	allowOriginFunc := func(r *http.Request) bool {
-		return true
-	}
-
-	server := socketio.NewServer(&engineio.Options{
-		Transports: []transport.Transport{
-			&polling.Transport{
-				CheckOrigin: allowOriginFunc,
-			},
-			&websocket.Transport{
-				CheckOrigin: allowOriginFunc,
-			},
-		},
-	})
-
-	server.OnConnect("/", func(s socketio.Conn) error {
-		s.SetContext("")
-		fmt.Println("connected:", s.ID())
-		return nil
-	})
-
-	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
-		fmt.Println("notice:", msg)
-		s.Emit("reply", "have "+msg)
-	})
-
-	server.OnEvent("/chat", "msg", func(s socketio.Conn, msg string) string {
-		s.SetContext(msg)
-		return "recv " + msg
-	})
-
-	server.OnEvent("/", "bye", func(s socketio.Conn) string {
-		last := s.Context().(string)
-		s.Emit("bye", last)
-		s.Close()
-		return last
-	})
-
-	server.OnError("/", func(s socketio.Conn, e error) {
-		fmt.Println("meet error:", e)
-	})
-
-	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-		fmt.Println("closed", reason)
-	})
-
-	go func() {
-		if err := server.Serve(); err != nil {
-			fmt.Printf("socketio listen error: %s\n", err)
-		}
-	}()
-
-	r.Handle("/socket.io/", server)
+	r.HandleFunc("/videoplayback", proxy.ServeHTTP)
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
