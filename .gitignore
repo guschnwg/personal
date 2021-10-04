@@ -6,3 +6,4 @@ node_modules
 size-plugin.json
 .env
 web/.cache
+.vscode
